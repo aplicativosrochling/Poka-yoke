@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Connect — Painel de Notas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg: #08090d;
+            --bg-secondary: #0e1017;
+            --card: #12141c;
+            --card-hover: #181b25;
+            --border: #1e2231;
+            --fg: #e8eaed;
+            --fg-secondary: #9ca3af;
+            --muted: #6b7280;
+            --accent: #00e5a0;
+            --accent-dim: rgba(0, 229, 160, 0.12);
+            --accent-glow: rgba(0, 229, 160, 0.25);
+            --danger: #ef4444;
+            --danger-dim: rgba(239, 68, 68, 0.12);
+            --warning: #f59e0b;
+            --cyan: #00b8d4;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Fundo animado */
+        .bg-scene {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.35;
+            animation: blobFloat 20s ease-in-out infinite alternate;
+        }
+        .blob-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            top: -15%; left: -10%; animation-duration: 22s;
+        }
+        .blob-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, var(--cyan) 0%, transparent 70%);
+            bottom: -10%; right: -8%; animation-duration: 18s; animation-delay: -5s;
+        }
+        .blob-3 {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation-duration: 25s; animation-delay: -10s; opacity: 0.15;
+        }
+        @keyframes blobFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+            100% { transform: translate(30px, 10px) scale(1.05); }
+        }
+
+        .grid-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Tela */
+        .screen {
+            display: none; position: relative; z-index: 10; min-height: 100vh;
+            animation: fadeSlideIn 0.5s ease-out;
+        }
+        .screen.active { display: flex; }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Glass card */
+        .glass-card {
+            background: rgba(18, 20, 28, 0.8);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border); border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(0, 229, 160, 0.2);
+            box-shadow: 0 0 30px rgba(0, 229, 160, 0.05);
+        }
+
+        /* Inputs */
+        .input-field {
+            width: 100%; padding: 12px 16px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--fg);
+            font-family: 'JetBrains Mono', monospace; font-size: 13px;
+            transition: all 0.3s ease; outline: none;
+        }
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+        .input-field::placeholder { color: var(--muted); }
+        .input-label {
+            display: block; font-size: 12px; font-weight: 600;
+            color: var(--fg-secondary); margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+
+        /* Botões */
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 28px; background: var(--accent); color: var(--bg);
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+            border: none; border-radius: 10px; cursor: pointer;
+            transition: all 0.25s ease; position: relative; overflow: hidden;
+        }
+        .btn-primary::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2) 50%, transparent 60%);
+            transform: translateX(-100%); transition: transform 0.5s ease;
+        }
+        .btn-primary:hover::before { transform: translateX(100%); }
+        .btn-primary:hover { box-shadow: 0 0 24px var(--accent-glow); transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0) scale(0.98); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 20px; background: transparent; color: var(--fg-secondary);
+            font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 13px;
+            border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .btn-ghost:hover { border-color: var(--fg-secondary); color: var(--fg); background: rgba(255,255,255,0.03); }
+
+        .btn-danger {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 8px 12px; background: var(--danger-dim); color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px;
+            cursor: pointer; font-size: 13px; transition: all 0.25s ease;
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; top: 24px; right: 24px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            padding: 14px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
+            display: flex; align-items: center; gap: 10px;
+            animation: toastIn 0.4s ease-out; min-width: 280px; max-width: 440px;
+            backdrop-filter: blur(16px);
+        }
+        .toast.success { background: rgba(0,229,160,0.12); border: 1px solid rgba(0,229,160,0.25); color: var(--accent); }
+        .toast.error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: var(--danger); }
+        .toast.info { background: rgba(0,184,212,0.12); border: 1px solid rgba(0,184,212,0.25); color: var(--cyan); }
+        .toast.warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: var(--warning); }
+        .toast.removing { animation: toastOut 0.3s ease-in forwards; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(60px) scale(0.9); } to { opacity:1; transform:translateX(0) scale(1); } }
+        @keyframes toastOut { to { opacity:0; transform:translateX(60px) scale(0.9); } }
+
+        .spinner {
+            width: 18px; height: 18px; border: 2px solid transparent;
+            border-top-color: currentColor; border-radius: 50%;
+            animation: spin 0.6s linear infinite; display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            display: inline-block; position: relative;
+        }
+        .status-dot.connected { background: var(--accent); }
+        .status-dot.connected::after {
+            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            border: 1px solid var(--accent); animation: statusPulse 2s ease-out infinite;
+        }
+        .status-dot.disconnected { background: var(--danger); }
+        @keyframes statusPulse { 0% { transform:scale(1); opacity:0.6; } 100% { transform:scale(2.2); opacity:0; } }
+
+        .note-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .note-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--cyan));
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .note-card:hover {
+            border-color: rgba(0,229,160,0.15); transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .note-card:hover::before { opacity: 1; }
+
+        .color-tag {
+            width: 12px; height: 12px; border-radius: 4px;
+            display: inline-block; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.2s ease;
+        }
+        .color-tag:hover, .color-tag.selected { transform: scale(1.3); border-color: var(--fg); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px); z-index: 1000;
+            display: none; align-items: center; justify-content: center;
+            animation: modalFadeIn 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 32px; width: 90%; max-width: 480px;
+            animation: modalSlideIn 0.35s ease-out;
+        }
+        @keyframes modalFadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes modalSlideIn { from { opacity:0; transform:scale(0.92) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+        .textarea-field {
+            width: 100%; padding: 12px 16px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif; font-size: 14px;
+            line-height: 1.6; transition: all 0.3s ease;
+            outline: none; resize: vertical; min-height: 100px;
+        }
+        .textarea-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        .particle {
+            position: fixed; width: 2px; height: 2px; background: var(--accent);
+            border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
+            animation: particleDrift linear infinite;
+        }
+        @keyframes particleDrift {
+            0% { opacity:0; transform:translateY(100vh) scale(0); }
+            10% { opacity:0.6; } 90% { opacity:0.6; }
+            100% { opacity:0; transform:translateY(-10vh) scale(1); }
+        }
+
+        .tab-btn {
+            padding: 10px 20px; font-size: 14px; font-weight: 500;
+            color: var(--muted); background: transparent; border: none;
+            border-bottom: 2px solid transparent; cursor: pointer;
+            transition: all 0.3s ease; font-family: 'Space Grotesk', sans-serif;
+        }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-btn:hover:not(.active) { color: var(--fg-secondary); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+
+        .stat-number {
+            font-size: 32px; font-weight: 700; color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .navbar {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(8,9,13,0.85); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Aviso file:// */
+        .file-warning {
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 12px; padding: 16px 20px;
+            margin-bottom: 20px;
+            animation: fadeSlideIn 0.5s ease-out;
+        }
+        .file-warning code {
+            background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace; font-size: 12px;
+            color: var(--warning);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .modal-content { padding: 24px; margin: 16px; }
+            .note-card { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-scene" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="grid-bg" aria-hidden="true"></div>
+    <div id="particles" aria-hidden="true"></div>
+    <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
+
+    <!-- ==================== TELA 1: CONFIGURAÇÃO ==================== -->
+    <section class="screen active" id="screenConfig">
+        <div class="flex items-center justify-center min-h-screen w-full p-4">
+            <div class="glass-card w-full max-w-2xl p-8 md:p-10">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.2);">
+                        <i class="fa-solid fa-fire-flame-curved text-2xl" style="color: var(--accent);"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-2">Firebase Connect</h1>
+                    <p class="text-sm" style="color: var(--fg-secondary);">Configure as credenciais do seu projeto Firebase para iniciar</p>
+                </div>
+
+                <!-- Aviso file:// -->
+                <div class="file-warning" id="fileWarning" style="display:none;">
+                    <p class="text-xs leading-relaxed" style="color: var(--warning);">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                        <strong>Atencao:</strong> Voce esta abrindo este arquivo diretamente (<code>file://</code>). Para funcionar corretamente, use um servidor local:<br>
+                        <code>npx serve .</code> &nbsp;ou&nbsp; <code>python -m http.server 8000</code> &nbsp;e acesse <code>http://localhost:8000</code>
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="md:col-span-2">
+                        <label class="input-label" for="cfgApiKey">API Key</label>
+                        <input type="text" id="cfgApiKey" class="input-field" placeholder="AIzaSy...">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="input-label" for="cfgAuthDomain">Auth Domain</label>
+                        <input type="text" id="cfgAuthDomain" class="input-field" placeholder="meu-projeto.firebaseapp.com">
+                    </div>
+                    <div>
+                        <label class="input-label" for="cfgProjectId">Project ID</label>
+                        <input type="text" id="cfgProjectId" class="input-field" placeholder="meu-projeto-123">
+                    </div>
+                    <div>
+                        <label class="input-label" for="cfgStorageBucket">Storage Bucket</label>
+                        <input type="text" id="cfgStorageBucket" class="input-field" placeholder="meu-projeto.appspot.com">
+                    </div>
+                    <div>
+                        <label class="input-label" for="cfgSenderId">Messaging Sender ID</label>
+                        <input type="text" id="cfgSenderId" class="input-field" placeholder="123456789">
+                    </div>
+                    <div>
+                        <label class="input-label" for="cfgAppId">App ID</label>
+                        <input type="text" id="cfgAppId" class="input-field" placeholder="1:123456789:web:abc123">
+                    </div>
+                </div>
+
+                <div class="rounded-12 p-4 mb-6" style="background: rgba(0,184,212,0.06); border: 1px solid rgba(0,184,212,0.15); border-radius: 12px;">
+                    <p class="text-xs leading-relaxed" style="color: var(--cyan);">
+                        <i class="fa-solid fa-circle-info mr-1"></i>
+                        Encontre essas credenciais em <strong>Firebase Console &gt; Configuracoes do projeto &gt; Geral &gt; Seus apps &gt; Config</strong>.
+                        Ative <strong>Authentication &gt; Email/Senha</strong> e crie um banco <strong>Firestore</strong> no modo de teste.
+                    </p>
+                </div>
+
+                <button class="btn-primary w-full text-base" id="btnConnect" onclick="connectFirebase()">
+                    <i class="fa-solid fa-plug"></i>
+                    Conectar ao Firebase
+                </button>
+
+                <div class="mt-4 text-center">
+                    <button class="btn-ghost text-xs" onclick="loadSavedConfig()" id="btnLoadSaved" style="display:none;">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Carregar configuracao salva
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TELA 2: AUTENTICACAO ==================== -->
+    <section class="screen" id="screenAuth">
+        <div class="flex items-center justify-center min-h-screen w-full p-4">
+            <div class="glass-card w-full max-w-md p-8 md:p-10">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: var(--accent-dim); border: 1px solid rgba(0,229,160,0.2);">
+                        <i class="fa-solid fa-shield-halved text-xl" style="color: var(--accent);"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-1" id="authTitle">Entrar na sua conta</h2>
+                    <p class="text-sm" style="color: var(--fg-secondary);" id="authSubtitle">Use email e senha para autenticar</p>
+                </div>
+
+                <div class="flex items-center justify-center gap-2 mb-6 text-xs" style="color: var(--fg-secondary);">
+                    <span class="status-dot connected"></span>
+                    Firebase conectado — <span id="authProjectName">projeto</span>
+                </div>
+
+                <div class="flex border-b mb-6" style="border-color: var(--border);">
+                    <button class="tab-btn active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
+                    <button class="tab-btn" id="tabRegister" onclick="switchAuthTab('register')">Criar conta</button>
+                </div>
+
+                <form onsubmit="handleAuth(event)">
+                    <div id="nameField" style="display:none;" class="mb-4">
+                        <label class="input-label" for="authName">Nome</label>
+                        <input type="text" id="authName" class="input-field" placeholder="Seu nome" style="font-family: 'Space Grotesk', sans-serif;">
+                    </div>
+                    <div class="mb-4">
+                        <label class="input-label" for="authEmail">Email</label>
+                        <input type="email" id="authEmail" class="input-field" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="input-label" for="authPassword">Senha</label>
+                        <div class="relative">
+                            <input type="password" id="authPassword" class="input-field pr-12" placeholder="Min. 6 caracteres" required minlength="6">
+                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--muted); background: none; border: none; cursor: pointer;" onclick="togglePasswordVisibility()" aria-label="Mostrar/ocultar senha">
+                                <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary w-full" id="btnAuth">
+                        <span id="btnAuthText">Entrar</span>
+                        <span id="btnAuthSpinner" style="display:none;" class="spinner"></span>
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center">
+                    <button class="btn-ghost text-xs" onclick="disconnectFirebase()">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Alterar configuracao
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TELA 3: DASHBOARD ==================== -->
+    <section class="screen" id="screenDashboard">
+        <nav class="navbar">
+            <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-fire-flame-curved" style="color: var(--accent);"></i>
+                    <span class="font-semibold text-sm">Firebase Connect</span>
+                    <span class="status-dot connected ml-2"></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style="background: var(--bg-secondary); border: 1px solid var(--border);">
+                        <i class="fa-solid fa-user" style="color: var(--accent);"></i>
+                        <span id="navUserName" style="color: var(--fg-secondary);">Usuario</span>
+                    </div>
+                    <button class="btn-ghost text-xs" onclick="handleLogout()">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="hidden sm:inline">Sair</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-6xl mx-auto px-4 py-8 w-full">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass-card p-5 text-center">
+                    <div class="stat-number" id="statTotal">0</div>
+                    <div class="text-xs mt-1" style="color: var(--muted);">Total de notas</div>
+                </div>
+                <div class="glass-card p-5 text-center">
+                    <div class="stat-number" id="statToday" style="color: var(--cyan);">0</div>
+                    <div class="text-xs mt-1" style="color: var(--muted);">Criadas hoje</div>
+                </div>
+                <div class="glass-card p-5 text-center">
+                    <div class="stat-number" id="statColors" style="color: var(--warning);">0</div>
+                    <div class="text-xs mt-1" style="color: var(--muted);">Categorias</div>
+                </div>
+                <div class="glass-card p-5 text-center">
+                    <div class="stat-number" id="statChars" style="color: #a78bfa;">0</div>
+                    <div class="text-xs mt-1" style="color: var(--muted);">Caracteres</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+                <div class="relative flex-1 max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm" style="color: var(--muted);"></i>
+                    <input type="text" id="searchInput" class="input-field pl-11" placeholder="Buscar notas..." oninput="filterNotes()" style="font-family: 'Space Grotesk', sans-serif;">
+                </div>
+                <div class="flex gap-3">
+                    <select id="filterColor" class="input-field" style="width: auto; font-family: 'Space Grotesk', sans-serif; font-size: 13px;" onchange="filterNotes()">
+                        <option value="all">Todas as cores</option>
+                        <option value="#00e5a0">Verde</option>
+                        <option value="#00b8d4">Ciano</option>
+                        <option value="#f59e0b">Amarelo</option>
+                        <option value="#ef4444">Vermelho</option>
+                        <option value="#a78bfa">Roxo</option>
+                        <option value="#f472b6">Rosa</option>
+                    </select>
+                    <button class="btn-primary" onclick="openNoteModal()">
+                        <i class="fa-solid fa-plus"></i>
+                        Nova nota
+                    </button>
+                </div>
+            </div>
+
+            <div id="notesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fa-solid fa-note-sticky block"></i>
+                <p class="text-lg font-medium mb-1">Nenhuma nota encontrada</p>
+                <p class="text-sm">Crie sua primeira nota para comecar</p>
+            </div>
+        </main>
+    </section>
+
+    <!-- ==================== MODAL: NOTA ==================== -->
+    <div class="modal-overlay" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold" id="modalTitle">Nova nota</h3>
+                <button onclick="closeNoteModal()" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px;" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="saveNote(event)">
+                <div class="mb-4">
+                    <label class="input-label" for="noteTitle">Titulo</label>
+                    <input type="text" id="noteTitle" class="input-field" placeholder="Titulo da nota" required style="font-family:'Space Grotesk',sans-serif; font-size:14px;">
+                </div>
+                <div class="mb-4">
+                    <label class="input-label" for="noteContent">Conteudo</label>
+                    <textarea id="noteContent" class="textarea-field" placeholder="Escreva sua nota aqui..." required></textarea>
+                </div>
+                <div class="mb-6">
+                    <label class="input-label">Cor da categoria</label>
+                    <div class="flex gap-3 mt-2" id="colorPicker">
+                        <span class="color-tag selected" data-color="#00e5a0" style="background:#00e5a0;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Verde"></span>
+                        <span class="color-tag" data-color="#00b8d4" style="background:#00b8d4;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Ciano"></span>
+                        <span class="color-tag" data-color="#f59e0b" style="background:#f59e0b;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Amarelo"></span>
+                        <span class="color-tag" data-color="#ef4444" style="background:#ef4444;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Vermelho"></span>
+                        <span class="color-tag" data-color="#a78bfa" style="background:#a78bfa;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Roxo"></span>
+                        <span class="color-tag" data-color="#f472b6" style="background:#f472b6;" onclick="selectColor(this)" tabindex="0" role="radio" aria-label="Rosa"></span>
+                    </div>
+                </div>
+                <input type="hidden" id="noteEditId" value="">
+                <div class="flex gap-3">
+                    <button type="button" class="btn-ghost flex-1" onclick="closeNoteModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary flex-1" id="btnSaveNote">
+                        <i class="fa-solid fa-check"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: EXCLUIR ==================== -->
+    <div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width:380px; text-align:center;">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4" style="background:var(--danger-dim);">
+                <i class="fa-solid fa-trash text-xl" style="color:var(--danger);"></i>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Excluir nota?</h3>
+            <p class="text-sm mb-6" style="color:var(--fg-secondary);">Essa acao nao pode ser desfeita. A nota sera removida permanentemente.</p>
+            <input type="hidden" id="deleteNoteId" value="">
+            <div class="flex gap-3">
+                <button class="btn-ghost flex-1" onclick="closeDeleteModal()">Cancelar</button>
+                <button class="btn-primary flex-1" style="background:var(--danger);" onclick="confirmDeleteNote()">
+                    <i class="fa-solid fa-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // VARIÁVEIS GLOBAIS
+        // ==========================================
+        let app = null;
+        let auth = null;
+        let db = null;
+        let currentUser = null;
+        let notesListener = null;
+        let allNotes = [];
+        let selectedColor = '#00e5a0';
+        let authMode = 'login';
+
+        // Armazenamento seguro (fallback para quando localStorage não está disponível)
+        let memoryStorage = {};
+        const safeStorage = {
+            get(key) {
+                try { return localStorage.getItem(key); }
+                catch (e) { return memoryStorage[key] || null; }
+            },
+            set(key, value) {
+                try { localStorage.setItem(key, value); }
+                catch (e) { memoryStorage[key] = value; }
+            },
+            remove(key) {
+                try { localStorage.removeItem(key); }
+                catch (e) { delete memoryStorage[key]; }
+            }
+        };
+
+        // ==========================================
+        // DETECTAR file:// E MOSTRAR AVISO
+        // ==========================================
+        (function detectFileProtocol() {
+            const isFile = window.location.protocol === 'file:';
+            const warning = document.getElementById('fileWarning');
+            if (isFile && warning) {
+                warning.style.display = 'block';
+            }
+        })();
+
+        // ==========================================
+        // PARTÍCULAS
+        // ==========================================
+        (function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 25; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (12 + Math.random() * 20) + 's';
+                p.style.animationDelay = -(Math.random() * 20) + 's';
+                p.style.width = p.style.height = (1 + Math.random() * 2.5) + 'px';
+                if (Math.random() > 0.6) p.style.background = 'var(--cyan)';
+                container.appendChild(p);
+            }
+        })();
+
+        // ==========================================
+        // TOAST
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success:'fa-circle-check', error:'fa-circle-xmark', info:'fa-circle-info', warning:'fa-triangle-exclamation' };
+            toast.innerHTML = `<i class="fa-solid ${icons[type]||icons.info}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        // ==========================================
+        // NAVEGAÇÃO
+        // ==========================================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(screenId);
+            if (target) {
+                target.classList.add('active');
+                target.style.animation = 'none';
+                target.offsetHeight;
+                target.style.animation = '';
+            }
+        }
+
+        // ==========================================
+        // CONFIGURAÇÃO
+        // ==========================================
+        function loadSavedConfig() {
+            try {
+                const saved = safeStorage.get('firebaseConfig');
+                if (saved) {
+                    const cfg = JSON.parse(saved);
+                    document.getElementById('cfgApiKey').value = cfg.apiKey || '';
+                    document.getElementById('cfgAuthDomain').value = cfg.authDomain || '';
+                    document.getElementById('cfgProjectId').value = cfg.projectId || '';
+                    document.getElementById('cfgStorageBucket').value = cfg.storageBucket || '';
+                    document.getElementById('cfgSenderId').value = cfg.messagingSenderId || '';
+                    document.getElementById('cfgAppId').value = cfg.appId || '';
+                    showToast('Configuracao carregada', 'info');
+                } else {
+                    showToast('Nenhuma configuracao salva encontrada', 'warning');
+                }
+            } catch (e) {
+                showToast('Erro ao carregar configuracao salva', 'error');
+            }
+        }
+
+        // Verificar config salva
+        (function checkSaved() {
+            try {
+                const s = safeStorage.get('firebaseConfig');
+                if (s) document.getElementById('btnLoadSaved').style.display = 'inline-flex';
+            } catch(e) {}
+        })();
+
+        function connectFirebase() {
+            const btn = document.getElementById('btnConnect');
+            const apiKey = document.getElementById('cfgApiKey').value.trim();
+            const authDomain = document.getElementById('cfgAuthDomain').value.trim();
+            const projectId = document.getElementById('cfgProjectId').value.trim();
+            const storageBucket = document.getElementById('cfgStorageBucket').value.trim();
+            const senderId = document.getElementById('cfgSenderId').value.trim();
+            const appId = document.getElementById('cfgAppId').value.trim();
+
+            if (!apiKey || !authDomain || !projectId || !appId) {
+                showToast('Preencha pelo menos API Key, Auth Domain, Project ID e App ID', 'error');
+                return;
+            }
+
+            // Aviso se estiver em file://
+            if (window.location.protocol === 'file:') {
+                showToast('Atencao: arquivo aberto via file://. Use um servidor local para funcionar corretamente.', 'warning');
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Conectando...';
+
+            // Pequeno delay para permitir renderização do spinner
+            setTimeout(() => {
+                try {
+                    const firebaseConfig = {
+                        apiKey: apiKey,
+                        authDomain: authDomain,
+                        projectId: projectId,
+                        storageBucket: storageBucket || null,
+                        messagingSenderId: senderId || null,
+                        appId: appId
+                    };
+
+                    app = firebase.initializeApp(firebaseConfig);
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+
+                    // Salvar config
+                    safeStorage.set('firebaseConfig', JSON.stringify(firebaseConfig));
+
+                    // Timeout de segurança
+                    const safetyTimeout = setTimeout(() => {
+                        // Se ainda está na tela de config após 8s, algo pode estar errado
+                        if (document.getElementById('screenConfig').classList.contains('active')) {
+                            resetConnectBtn();
+                            showToast('Tempo esgotado. Verifique suas credenciais e tente novamente.', 'warning');
+                        }
+                    }, 8000);
+
+                    auth.onAuthStateChanged((user) => {
+                        clearTimeout(safetyTimeout);
+                        if (user) {
+                            currentUser = user;
+                            showScreen('screenDashboard');
+                            startListeningNotes();
+                            showToast('Conectado com sucesso!', 'success');
+                        } else {
+                            document.getElementById('authProjectName').textContent = projectId;
+                            showScreen('screenAuth');
+                            showToast('Firebase conectado. Faca login ou crie uma conta.', 'success');
+                        }
+                        resetConnectBtn();
+                    });
+
+                } catch (error) {
+                    resetConnectBtn();
+                    let msg = error.message || 'Erro desconhecido';
+                    if (msg.includes('Failed to read')) {
+                        msg = 'Erro de seguranca do navegador. Abra o arquivo via servidor local (ex: npx serve .)';
+                    }
+                    showToast(`Erro: ${msg}`, 'error');
+                    if (app) { try { app.delete(); } catch(e){} app=null; auth=null; db=null; }
+                }
+            }, 150);
+        }
+
+        function resetConnectBtn() {
+            const btn = document.getElementById('btnConnect');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plug"></i> Conectar ao Firebase';
+        }
+
+        function disconnectFirebase() {
+            if (notesListener) { notesListener(); notesListener = null; }
+            if (app) { try { app.delete(); } catch(e){} }
+            app = null; auth = null; db = null; currentUser = null;
+            allNotes = [];
+            showScreen('screenConfig');
+            showToast('Desconectado do Firebase', 'info');
+        }
+
+        // ==========================================
+        // AUTENTICAÇÃO
+        // ==========================================
+        function switchAuthTab(mode) {
+            authMode = mode;
+            document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+            document.getElementById('nameField').style.display = mode === 'register' ? 'block' : 'none';
+            document.getElementById('authTitle').textContent = mode === 'login' ? 'Entrar na sua conta' : 'Criar nova conta';
+            document.getElementById('authSubtitle').textContent = mode === 'login' ? 'Use email e senha para autenticar' : 'Preencha os dados para se registrar';
+            document.getElementById('btnAuthText').textContent = mode === 'login' ? 'Entrar' : 'Criar conta';
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('authPassword');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') { input.type = 'text'; icon.className = 'fa-solid fa-eye-slash'; }
+            else { input.type = 'password'; icon.className = 'fa-solid fa-eye'; }
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const btn = document.getElementById('btnAuth');
+            const btnText = document.getElementById('btnAuthText');
+            const btnSpinner = document.getElementById('btnAuthSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+
+            try {
+                if (authMode === 'register') {
+                    const name = document.getElementById('authName').value.trim();
+                    if (!name) { showToast('Informe seu nome', 'error'); throw new Error('Nome obrigatorio'); }
+                    const cred = await auth.createUserWithEmailAndPassword(email, password);
+                    await cred.user.updateProfile({ displayName: name });
+                    currentUser = cred.user;
+                    showToast('Conta criada com sucesso!', 'success');
+                } else {
+                    const cred = await auth.signInWithEmailAndPassword(email, password);
+                    currentUser = cred.user;
+                    showToast('Login realizado!', 'success');
+                }
+                showScreen('screenDashboard');
+                startListeningNotes();
+            } catch (error) {
+                let msg = error.message;
+                if (msg.includes('auth/email-already-in-use')) msg = 'Este email ja esta em uso';
+                else if (msg.includes('auth/invalid-email')) msg = 'Email invalido';
+                else if (msg.includes('auth/weak-password')) msg = 'Senha muito fraca (minimo 6 caracteres)';
+                else if (msg.includes('auth/user-not-found')) msg = 'Usuario nao encontrado';
+                else if (msg.includes('auth/wrong-password')) msg = 'Senha incorreta';
+                else if (msg.includes('auth/invalid-credential')) msg = 'Credenciais invalidas';
+                else if (msg.includes('auth/too-many-requests')) msg = 'Muitas tentativas. Tente novamente mais tarde';
+                else if (msg.includes('auth/network-request-failed')) msg = 'Erro de rede. Verifique sua conexao';
+                showToast(msg, 'error');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                if (notesListener) { notesListener(); notesListener = null; }
+                await auth.signOut();
+                currentUser = null; allNotes = [];
+                showScreen('screenAuth');
+                showToast('Desconectado', 'info');
+            } catch (error) {
+                showToast(`Erro ao sair: ${error.message}`, 'error');
+            }
+        }
+
+        // ==========================================
+        // DASHBOARD — NOTAS
+        // ==========================================
+        function startListeningNotes() {
+            if (!db || !currentUser) return;
+            const name = currentUser.displayName || currentUser.email.split('@')[0];
+            document.getElementById('navUserName').textContent = name;
+
+            const notesRef = db.collection('users').doc(currentUser.uid).collection('notes').orderBy('createdAt', 'desc');
+            notesListener = notesRef.onSnapshot((snapshot) => {
+                allNotes = [];
+                snapshot.forEach((doc) => { allNotes.push({ id: doc.id, ...doc.data() }); });
+                renderNotes();
+                updateStats();
+            }, (error) => {
+                console.error('Erro no listener:', error);
+                if (error.code === 'permission-denied') {
+                    showToast('Permissao negada. Verifique as regras de seguranca do Firestore.', 'error');
+                } else {
+                    showToast(`Erro ao sincronizar: ${error.message}`, 'error');
+                }
+            });
+        }
+
+        function renderNotes() {
+            const grid = document.getElementById('notesGrid');
+            const empty = document.getElementById('emptyState');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const colorFilter = document.getElementById('filterColor').value;
+
+            let filtered = allNotes.filter(n => {
+                const matchSearch = !search || n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search);
+                const matchColor = colorFilter === 'all' || n.color === colorFilter;
+                return matchSearch && matchColor;
+            });
+
+            if (filtered.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+
+            grid.innerHTML = filtered.map(note => {
+                const date = note.createdAt ? new Date(note.createdAt.seconds * 1000) : new Date();
+                const dateStr = date.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+                const timeStr = date.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+                const preview = note.content.length > 120 ? note.content.substring(0, 120) + '...' : note.content;
+                return `
+                    <article class="note-card" data-id="${note.id}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span style="width:10px;height:10px;border-radius:4px;background:${note.color||'#00e5a0'};display:inline-block;flex-shrink:0;"></span>
+                                <h4 class="font-semibold text-sm" style="color:var(--fg);">${escapeHtml(note.title)}</h4>
+                            </div>
+                            <div class="flex gap-1 flex-shrink-0">
+                                <button onclick="editNote('${note.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.color='var(--accent)';this.style.background='var(--accent-dim)'" onmouseout="this.style.color='var(--muted)';this.style.background='none'" aria-label="Editar">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                <button onclick="openDeleteModal('${note.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.color='var(--danger)';this.style.background='var(--danger-dim)'" onmouseout="this.style.color='var(--muted)';this.style.background='none'" aria-label="Excluir">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-sm leading-relaxed mb-4" style="color:var(--fg-secondary);">${escapeHtml(preview)}</p>
+                        <div class="flex items-center justify-between text-xs" style="color:var(--muted);">
+                            <span><i class="fa-regular fa-calendar mr-1"></i>${dateStr}</span>
+                            <span><i class="fa-regular fa-clock mr-1"></i>${timeStr}</span>
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
+        function filterNotes() { renderNotes(); }
+
+        function updateStats() {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const todayTs = today.getTime() / 1000;
+            animateNumber('statTotal', allNotes.length);
+            animateNumber('statToday', allNotes.filter(n => n.createdAt && n.createdAt.seconds >= todayTs).length);
+            animateNumber('statColors', new Set(allNotes.map(n => n.color||'#00e5a0')).size);
+            animateNumber('statChars', allNotes.reduce((s,n) => s + (n.content ? n.content.length : 0), 0));
+        }
+
+        function animateNumber(id, target) {
+            const el = document.getElementById(id);
+            const current = parseInt(el.textContent.replace(/\./g,'')) || 0;
+            if (current === target) return;
+            const diff = target - current;
+            const steps = Math.min(Math.abs(diff), 30);
+            const inc = diff / steps;
+            let step = 0;
+            const iv = setInterval(() => {
+                step++;
+                if (step >= steps) { el.textContent = target.toLocaleString('pt-BR'); clearInterval(iv); }
+                else el.textContent = Math.round(current + inc * step).toLocaleString('pt-BR');
+            }, 25);
+        }
+
+        // ==========================================
+        // MODAL NOTA
+        // ==========================================
+        function openNoteModal(editId) {
+            const modal = document.getElementById('noteModal');
+            const titleEl = document.getElementById('modalTitle');
+            const titleIn = document.getElementById('noteTitle');
+            const contentIn = document.getElementById('noteContent');
+            const editIdIn = document.getElementById('noteEditId');
+
+            if (editId) {
+                const note = allNotes.find(n => n.id === editId);
+                if (!note) return;
+                titleEl.textContent = 'Editar nota';
+                titleIn.value = note.title; contentIn.value = note.content;
+                editIdIn.value = editId; selectedColor = note.color || '#00e5a0';
+            } else {
+                titleEl.textContent = 'Nova nota';
+                titleIn.value = ''; contentIn.value = '';
+                editIdIn.value = ''; selectedColor = '#00e5a0';
+            }
+            document.querySelectorAll('#colorPicker .color-tag').forEach(t => t.classList.toggle('selected', t.dataset.color === selectedColor));
+            modal.classList.add('active');
+            setTimeout(() => titleIn.focus(), 100);
+        }
+
+        function closeNoteModal() { document.getElementById('noteModal').classList.remove('active'); }
+
+        function selectColor(el) {
+            document.querySelectorAll('#colorPicker .color-tag').forEach(t => t.classList.remove('selected'));
+            el.classList.add('selected'); selectedColor = el.dataset.color;
+        }
+
+        async function saveNote(e) {
+            e.preventDefault();
+            if (!db || !currentUser) return;
+            const titleVal = document.getElementById('noteTitle').value.trim();
+            const contentVal = document.getElementById('noteContent').value.trim();
+            const editId = document.getElementById('noteEditId').value;
+            const btn = document.getElementById('btnSaveNote');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Salvando...';
+
+            try {
+                const noteData = { title: titleVal, content: contentVal, color: selectedColor, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+                const ref = db.collection('users').doc(currentUser.uid).collection('notes');
+                if (editId) { await ref.doc(editId).update(noteData); showToast('Nota atualizada!', 'success'); }
+                else { noteData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await ref.add(noteData); showToast('Nota criada!', 'success'); }
+                closeNoteModal();
+            } catch (error) { showToast(`Erro ao salvar: ${error.message}`, 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar'; }
+        }
+
+        function editNote(id) { openNoteModal(id); }
+
+        // ==========================================
+        // MODAL EXCLUIR
+        // ==========================================
+        function openDeleteModal(id) { document.getElementById('deleteNoteId').value = id; document.getElementById('deleteModal').classList.add('active'); }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); }
+
+        async function confirmDeleteNote() {
+            const id = document.getElementById('deleteNoteId').value;
+            if (!db || !currentUser || !id) return;
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
+                showToast('Nota excluida', 'success'); closeDeleteModal();
+            } catch (error) { showToast(`Erro ao excluir: ${error.message}`, 'error'); }
+        }
+
+        // ==========================================
+        // UTILITÁRIOS
+        // ==========================================
+        function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+        document.querySelectorAll('.modal-overlay').forEach(o => { o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n' && document.getElementById('screenDashboard').classList.contains('active')) { e.preventDefault(); openNoteModal(); }
+        });
+    </script>
+</body>
+</html>
