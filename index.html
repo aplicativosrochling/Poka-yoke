@@ -1356,6 +1356,10 @@ function setupFirebaseListeners() {
       pokaYokes = data;
       console.log('📡 Poka-Yokes atualizados:', data.length);
       renderAll();
+      // Se veio de QR code, tenta abrir agora que os dados chegaram
+      if (_qrPokaYokeId) {
+        tryOpenQrPokaYoke();
+      }
     }, (error) => {
       console.warn('⚠️ Erro no listener Poka-Yokes:', error);
       // Usa fallback apenas se não tiver dados E não estiver online
@@ -2565,16 +2569,19 @@ async function initSystem() {
     linhas = FALLBACK.linhas;
     renderAll();
 
-    // Tenta autenticar
+    // Tenta autenticar e conectar no Firebase
     const user = await initAuth();
 
-    // Configura listeners apenas se autenticado
+    // Configura listeners do Firebase
     if (user) {
       setupFirebaseListeners();
     }
 
     // Verifica se veio de scan de QR code (URL param ?id=PY-001)
-    checkUrlParam();
+    // Deixa um delay para os listeners do Firebase carregarem os dados
+    setTimeout(function() {
+      checkUrlParam();
+    }, 500);
 
     console.log('🚀 Sistema inicializado com Firebase!');
   } catch (error) {
@@ -2583,29 +2590,63 @@ async function initSystem() {
     pokaYokes = FALLBACK.pokaYokes;
     linhas = FALLBACK.linhas;
     renderAll();
-    checkUrlParam();
+    // Mesmo com erro, tenta abrir do QR
+    setTimeout(function() {
+      checkUrlParam();
+    }, 500);
   }
 }
+
+/* Verifica se a URL tem ?id=PY-001 (veio de scan externo) */
+/* ID do poka-yoke vindo do QR code (URL param) */
+var _qrPokaYokeId = null;
+var _qrCheckAttempts = 0;
 
 /* Verifica se a URL tem ?id=PY-001 (veio de scan externo) */
 function checkUrlParam() {
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   if (id) {
-    console.log('📷 QR Code scan detectado. ID:', id);
-    setTimeout(function() {
-      var p = pokaYokes.find(function(x) { return x.id === id.toUpperCase(); });
-      if (p) {
-        if (window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        window.switchView('pokayokes');
-        window.openDetail(id.toUpperCase());
-        showToast('Poka-Yoke aberto via QR Code: ' + id.toUpperCase(), 'success');
-      } else {
-        showToast('Poka-Yoke nao encontrado: ' + id.toUpperCase(), 'error');
-      }
-    }, 800);
+    _qrPokaYokeId = id.toUpperCase();
+    console.log('📷 QR Code scan detectado. ID:', _qrPokaYokeId);
+    // Limpa a URL imediatamente
+    if (window.history.replaceState) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    // Tenta abrir o poka-yoke (vai retry se dados ainda nao carregaram)
+    tryOpenQrPokaYoke();
+  }
+}
+
+/* Tenta abrir o poka-yoke do QR, com retry ate conectar no Firebase */
+function tryOpenQrPokaYoke() {
+  if (!_qrPokaYokeId) return;
+
+  var id = _qrPokaYokeId;
+  var p = pokaYokes.find(function(x) { return x.id === id; });
+
+  if (p) {
+    // Encontrou! Abre o detail
+    console.log('✅ Poka-Yoke encontrado no Firebase:', id);
+    window.switchView('pokayokes');
+    window.openDetail(id);
+    showToast('Poka-Yoke aberto via QR Code: ' + id, 'success');
+    _qrPokaYokeId = null;
+    _qrCheckAttempts = 0;
+    return;
+  }
+
+  // Nao encontrou ainda - verifica se ainda esta tentando conectar
+  _qrCheckAttempts++;
+  if (_qrCheckAttempts <= 30) {  // Tenta por 15 segundos (30 x 500ms)
+    console.log('⏳ Aguardando dados do Firebase... tentativa', _qrCheckAttempts);
+    setTimeout(tryOpenQrPokaYoke, 500);
+  } else {
+    // Desistiu - mostra erro
+    console.error('❌ Poka-Yoke nao encontrado apos 15s:', id);
+    showToast('Poka-Yoke nao encontrado: ' + id + '. Verifique a conexao.', 'error');
+    _qrPokaYokeId = null;
+    _qrCheckAttempts = 0;
   }
 }
 
