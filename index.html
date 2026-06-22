@@ -1013,15 +1013,13 @@ function daysUntil(date) { if (!date) return 0; const t = new Date(); const g = 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function highlight(text, q) { if (!q) return escapeHtml(text); const e = escapeHtml(text); const r = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); return e.replace(r, '<span class="search-highlight">$1</span>'); }
 function getQRText(p) {
-  // Gera URL para abrir diretamente no sistema via GitHub Pages
-  // Se estiver rodando localmente (file://), usa o texto legível como fallback
-  var baseUrl = window.location.href.split('?')[0].split('#')[0];
-  var isLocalFile = window.location.protocol === 'file:';
-  if (isLocalFile) {
-    // fallback para texto legível quando testado localmente
+  // QR aponta para view.html (somente leitura) — mesma pasta do index
+  var base = window.location.href.split('?')[0].split('#')[0];
+  var dir  = base.substring(0, base.lastIndexOf('/') + 1);
+  if (window.location.protocol === 'file:') {
     return `POKAYOKE_ID:${p.id}\nNOME:${p.nome}\nLINHA:${p.linha}\nESTACAO:${p.estacao}`;
   }
-  return baseUrl + '?p=' + encodeURIComponent(p.id);
+  return dir + 'view.html?p=' + encodeURIComponent(p.id);
 }
 
 function generateQRCodeToDataURL(text, size, callback) {
