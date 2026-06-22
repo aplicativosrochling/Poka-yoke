@@ -967,15 +967,16 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
      📷 QR SCAN MODAL
      ============================================================ -->
 <div id="scanOverlay" class="modal-backdrop hidden">
-  <div class="modal" style="max-width: 520px;">
+  <div class="modal" style="max-width: 600px;">
     <div class="p-6 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg-2)] z-10">
       <div>
-        <h2 class="font-display font-bold text-xl">Escanear QR Code</h2>
-        <p class="text-xs text-[var(--fg-muted)] mt-0.5">Aponte a câmera para o QR code do poka-yoke</p>
+        <h2 class="font-display font-bold text-xl" id="scanModalTitle">Escanear QR Code</h2>
+        <p class="text-xs text-[var(--fg-muted)] mt-0.5" id="scanModalSubtitle">Aponte a câmera para o QR code do poka-yoke</p>
       </div>
       <button class="icon-btn" onclick="window.closeScanModal()"><i data-lucide="x"></i></button>
     </div>
-    <div class="p-6">
+    <!-- SCANNER VIEW -->
+    <div id="scanCameraView" class="p-6">
       <div id="scanReader" style="width: 100%; min-height: 300px; border-radius: 12px; overflow: hidden; background: var(--bg-3);"></div>
       <div id="scanStatus" class="mt-4 text-center text-sm text-[var(--fg-muted)]">
         <div class="flex items-center justify-center gap-2">
@@ -992,6 +993,27 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             Buscar
           </button>
         </div>
+      </div>
+    </div>
+    <!-- RESULT VIEW (hidden initially) -->
+    <div id="scanResultView" class="hidden p-6">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 rounded-full bg-[rgba(34,197,94,0.12)] flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="check-circle" class="text-[var(--green)]" style="width:28px;height:28px"></i>
+        </div>
+        <h3 class="font-display font-bold text-lg">Poka-Yoke Encontrado</h3>
+        <p class="text-xs text-[var(--fg-muted)] mt-1" id="scanResultSource">Dados lidos do QR Code</p>
+      </div>
+      <div class="space-y-3" id="scanResultContent"></div>
+      <div class="flex gap-3 mt-6 pt-4 border-t border-[var(--border)]">
+        <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.scanAgain()">
+          <i data-lucide="scan-line" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px"></i>
+          Escanear Outro
+        </button>
+        <button class="btn-accent px-4 py-2.5 rounded-lg text-sm font-bold flex-1" onclick="window.closeScanModal()">
+          <i data-lucide="check" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px"></i>
+          Fechar
+        </button>
       </div>
     </div>
   </div>
@@ -2101,6 +2123,14 @@ window.openScanModal = function() {
 window.closeScanModal = function() {
   window.stopScan();
   document.getElementById('scanOverlay').classList.add('hidden');
+  // Reset to camera view after close
+  setTimeout(function() {
+    document.getElementById('scanResultView').classList.add('hidden');
+    document.getElementById('scanCameraView').classList.remove('hidden');
+    document.getElementById('scanModalTitle').textContent = 'Escanear QR Code';
+    document.getElementById('scanModalSubtitle').textContent = 'Aponte a câmera para o QR code do poka-yoke';
+    document.getElementById('scanResultContent').innerHTML = '';
+  }, 300);
 };
 
 window.startScan = function() {
@@ -2171,49 +2201,179 @@ window.onScanSuccess = function(decodedText) {
   // Stop scanning
   window.stopScan();
 
-  // Parse the QR code text
-  var pokaYokeId = window.parseQRCode(decodedText);
+  // Parse ALL fields from QR code
+  var scanned = window.parseQRCodeFull(decodedText);
 
-  if (pokaYokeId) {
-    document.getElementById('scanStatus').innerHTML = '<div class="flex items-center justify-center gap-2 text-[var(--green)]"><i data-lucide="check-circle" style="width:18px;height:18px"></i><span>QR Code lido: <strong class="font-mono">' + escapeHtml(pokaYokeId) + '</strong></span></div>';
-    lucide.createIcons();
-
-    // Close scan modal and open detail
-    setTimeout(function() {
-      window.closeScanModal();
-      var p = pokaYokes.find(function(x) { return x.id === pokaYokeId; });
-      if (p) {
-        // Switch to pokayokes view if not already there
-        if (currentView !== 'pokayokes') {
-          window.switchView('pokayokes');
-        }
-        window.openDetail(pokaYokeId);
-        showToast('Poka-Yoke encontrado: ' + pokaYokeId, 'success');
-      } else {
-        showToast('Poka-Yoke não encontrado: ' + pokaYokeId, 'error');
-      }
-    }, 800);
+  if (scanned && scanned.id) {
+    // Show result inside the scan modal
+    window.showScanResult(scanned);
   } else {
     document.getElementById('scanStatus').innerHTML = '<span class="text-[var(--red)]">QR Code inválido. Tente novamente.</span>';
-    // Restart scan after a delay
     setTimeout(function() {
       window.startScan();
     }, 1500);
   }
 };
 
-window.parseQRCode = function(text) {
+/* Parse ALL fields from QR code text */
+window.parseQRCodeFull = function(text) {
   if (!text) return null;
-  // Format expected: POKAYOKE_ID:PY-001 | NOME:... | LINHA:... | ESTACAO:...
-  var match = text.match(/POKAYOKE_ID:([A-Z0-9\-]+)/i);
-  if (match) return match[1].trim();
-  // Fallback: try to find any PY-XXX pattern
-  var fallback = text.match(/(PY-\d{3})/i);
-  if (fallback) return fallback[1].toUpperCase();
-  // Last resort: if text looks like an ID directly
-  if (/^PY-\d{3}$/i.test(text.trim())) return text.trim().toUpperCase();
-  return null;
+  var result = { id: null, nome: null, linha: null, estacao: null, raw: text };
+
+  // Extract each field
+  var idMatch = text.match(/POKAYOKE_ID:\s*([A-Z0-9\-]+)/i);
+  if (idMatch) result.id = idMatch[1].trim().toUpperCase();
+
+  var nomeMatch = text.match(/NOME:\s*([^\n]+)/i);
+  if (nomeMatch) result.nome = nomeMatch[1].trim();
+
+  var linhaMatch = text.match(/LINHA:\s*([^\n]+)/i);
+  if (linhaMatch) result.linha = linhaMatch[1].trim();
+
+  var estacaoMatch = text.match(/ESTACAO:\s*([^\n]+)/i);
+  if (estacaoMatch) result.estacao = estacaoMatch[1].trim();
+
+  // Fallback ID detection
+  if (!result.id) {
+    var fallback = text.match(/(PY-\d{3})/i);
+    if (fallback) result.id = fallback[1].toUpperCase();
+  }
+  if (!result.id && /^PY-\d{3}$/i.test(text.trim())) {
+    result.id = text.trim().toUpperCase();
+  }
+
+  return result;
 };
+
+/* Show scan result with ALL information */
+window.showScanResult = function(scanned) {
+  // Hide camera view, show result view
+  document.getElementById('scanCameraView').classList.add('hidden');
+  document.getElementById('scanResultView').classList.remove('hidden');
+  document.getElementById('scanModalTitle').textContent = 'Poka-Yoke Escaneado';
+  document.getElementById('scanModalSubtitle').textContent = 'Informações lidas do QR Code';
+
+  // Try to find in database for more complete info
+  var dbPoka = pokaYokes.find(function(x) { return x.id === scanned.id; });
+  var p = dbPoka || scanned;
+  var fromDB = !!dbPoka;
+
+  document.getElementById('scanResultSource').textContent = fromDB 
+    ? 'Dados sincronizados com o sistema' 
+    : 'Dados lidos do QR Code (offline)';
+
+  // Build the info display
+  var s = STATUS_CONFIG[p.status] || STATUS_CONFIG['Ativo'];
+  var tc = TIPOS_COLORS[p.tipo] || '#8a98ac';
+  var linhaNome = getLinhaNome(p.linha || scanned.linha);
+  var linhaCor = getLinhaCor(p.linha || scanned.linha);
+  var ef = p.eficiencia || 0;
+  var c = ef > 95 ? '#22c55e' : ef > 85 ? '#f59e0b' : '#ef4444';
+
+  var html = '';
+
+  // Header with ID and status
+  html += '<div class="flex items-center gap-3 mb-4">';
+  html += '<div class="w-12 h-12 rounded-xl bg-[var(--bg-3)] flex items-center justify-center flex-shrink-0">';
+  html += '<i data-lucide="shield-check" class="text-[var(--accent-bright)]" style="width:24px;height:24px"></i>';
+  html += '</div>';
+  html += '<div class="flex-1 min-w-0">';
+  html += '<div class="font-mono text-xs font-bold text-[var(--accent-bright)]">' + escapeHtml(p.id || scanned.id) + '</div>';
+  html += '<div class="font-display font-bold text-lg truncate">' + escapeHtml(p.nome || scanned.nome || '—') + '</div>';
+  html += '</div>';
+  if (p.status) {
+    html += '<span class="badge ' + s.cls + '"><span class="pulse-dot" style="color:' + s.color + '"></span>' + p.status + '</span>';
+  }
+  html += '</div>';
+
+  // Info grid
+  html += '<div class="grid grid-cols-2 gap-3">';
+
+  html += '<div class="bg-[var(--bg-3)] rounded-lg p-3">';
+  html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Linha</div>';
+  html += '<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:' + linhaCor + '"></span><span class="text-sm font-semibold">' + escapeHtml(linhaNome) + '</span></div>';
+  html += '</div>';
+
+  html += '<div class="bg-[var(--bg-3)] rounded-lg p-3">';
+  html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Estação</div>';
+  html += '<div class="text-sm font-mono font-semibold">' + escapeHtml(p.estacao || scanned.estacao || '—') + '</div>';
+  html += '</div>';
+
+  html += '<div class="bg-[var(--bg-3)] rounded-lg p-3">';
+  html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Tipo</div>';
+  html += '<div class="text-sm font-semibold" style="color:' + tc + '">' + (p.tipo || '—') + '</div>';
+  html += '</div>';
+
+  html += '<div class="bg-[var(--bg-3)] rounded-lg p-3">';
+  html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Responsável</div>';
+  html += '<div class="text-sm font-semibold">' + escapeHtml(p.responsavel || '—') + '</div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  // Eficiência bar (if available)
+  if (p.eficiencia) {
+    html += '<div class="mt-3 bg-[var(--bg-3)] rounded-lg p-3">';
+    html += '<div class="flex items-center justify-between mb-1.5"><span class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</span><span class="text-sm font-mono font-bold" style="color:' + c + '">' + ef.toFixed(1) + '%</span></div>';
+    html += '<div class="stat-bar"><div class="stat-bar-fill" style="width:' + ef + '%;background:linear-gradient(90deg,' + c + ',' + c + 'cc)"></div></div>';
+    html += '</div>';
+  }
+
+  // Defeitos evitados (if available)
+  if (p.defeitosEvitados) {
+    html += '<div class="mt-3 bg-[var(--bg-3)] rounded-lg p-3 flex items-center justify-between">';
+    html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Defeitos Evitados</div>';
+    html += '<div class="font-display font-bold text-xl text-[var(--accent-bright)]">' + p.defeitosEvitados.toLocaleString('pt-BR') + '</div>';
+    html += '</div>';
+  }
+
+  // Descrição (if available)
+  if (p.descricao) {
+    html += '<div class="mt-3 bg-[var(--bg-3)] rounded-lg p-3">';
+    html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Descrição</div>';
+    html += '<div class="text-sm text-[var(--fg-muted)] leading-relaxed">' + escapeHtml(p.descricao) + '</div>';
+    html += '</div>';
+  }
+
+  // Verificações (if available)
+  if (p.ultimaVerificacao || p.proximaVerificacao) {
+    html += '<div class="mt-3 grid grid-cols-2 gap-3">';
+    if (p.ultimaVerificacao) {
+      html += '<div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Última Verif.</div><div class="text-sm font-mono">' + fmtDate(p.ultimaVerificacao) + '</div></div>';
+    }
+    if (p.proximaVerificacao) {
+      var d = daysUntil(p.proximaVerificacao);
+      var dc = d < 0 ? 'var(--red)' : d < 7 ? 'var(--amber)' : 'var(--fg)';
+      html += '<div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima Verif.</div><div class="text-sm font-mono" style="color:' + dc + '">' + fmtDate(p.proximaVerificacao) + '</div></div>';
+    }
+    html += '</div>';
+  }
+
+  // If not in DB, show warning
+  if (!fromDB) {
+    html += '<div class="mt-3 p-3 rounded-lg bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.2)]">';
+    html += '<div class="flex items-center gap-2 text-[var(--amber)] text-sm font-semibold"><i data-lucide="alert-triangle" style="width:16px;height:16px;flex-shrink:0"></i><span>Dispositivo não encontrado no sistema</span></div>';
+    html += '<div class="text-xs text-[var(--fg-muted)] mt-1">Os dados acima foram lidos apenas do QR Code. O dispositivo pode ter sido removido ou o sistema está offline.</div>';
+    html += '</div>';
+  }
+
+  document.getElementById('scanResultContent').innerHTML = html;
+  lucide.createIcons();
+};
+
+/* Reset scan modal to scan again */
+window.scanAgain = function() {
+  document.getElementById('scanResultView').classList.add('hidden');
+  document.getElementById('scanCameraView').classList.remove('hidden');
+  document.getElementById('scanModalTitle').textContent = 'Escanear QR Code';
+  document.getElementById('scanModalSubtitle').textContent = 'Aponte a câmera para o QR code do poka-yoke';
+  document.getElementById('scanResultContent').innerHTML = '';
+  setTimeout(function() {
+    window.startScan();
+  }, 300);
+};
+
+
 
 window.scanManual = function() {
   var input = document.getElementById('scanManualInput');
@@ -2228,15 +2388,10 @@ window.scanManual = function() {
     showToast('Formato inválido. Use PY-001, PY-002, etc.', 'error');
     return;
   }
-  window.closeScanModal();
-  var p = pokaYokes.find(function(x) { return x.id === id; });
-  if (p) {
-    if (currentView !== 'pokayokes') window.switchView('pokayokes');
-    window.openDetail(id);
-    showToast('Poka-Yoke encontrado: ' + id, 'success');
-  } else {
-    showToast('Poka-Yoke não encontrado: ' + id, 'error');
-  }
+  // Stop scan and show result
+  window.stopScan();
+  var scanned = { id: id, nome: null, linha: null, estacao: null, raw: id };
+  window.showScanResult(scanned);
   if (input) input.value = '';
 };
 
