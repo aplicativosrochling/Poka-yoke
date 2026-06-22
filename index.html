@@ -1012,7 +1012,17 @@ function fmtDate(d) { if (!d) return '—'; const p = d.split('-'); return `${p[
 function daysUntil(date) { if (!date) return 0; const t = new Date(); const g = new Date(date); return Math.ceil((g - t) / (1000 * 60 * 60 * 24)); }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function highlight(text, q) { if (!q) return escapeHtml(text); const e = escapeHtml(text); const r = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); return e.replace(r, '<span class="search-highlight">$1</span>'); }
-function getQRText(p) { return `POKAYOKE_ID:${p.id}\nNOME:${p.nome}\nLINHA:${p.linha}\nESTACAO:${p.estacao}`; }
+function getQRText(p) {
+  // Gera URL para abrir diretamente no sistema via GitHub Pages
+  // Se estiver rodando localmente (file://), usa o texto legível como fallback
+  var baseUrl = window.location.href.split('?')[0].split('#')[0];
+  var isLocalFile = window.location.protocol === 'file:';
+  if (isLocalFile) {
+    // fallback para texto legível quando testado localmente
+    return `POKAYOKE_ID:${p.id}\nNOME:${p.nome}\nLINHA:${p.linha}\nESTACAO:${p.estacao}`;
+  }
+  return baseUrl + '?p=' + encodeURIComponent(p.id);
+}
 
 function generateQRCodeToDataURL(text, size, callback) {
   var container = document.createElement('div');
