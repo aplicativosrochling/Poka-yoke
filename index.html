@@ -404,7 +404,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   }
 
 </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -2166,34 +2165,91 @@ window.startScan = function() {
 
 window._doStartScan = function() {
   var reader = document.getElementById('scanReader');
-  html5QrCode = new Html5Qrcode('scanReader');
+  
+  if (!reader) {
+    console.error('❌ Elemento scanReader não encontrado no DOM');
+    document.getElementById('scanStatus').innerHTML = 
+      '<span class="text-[var(--red)]">Erro: Elemento de câmera não inicializado.</span>';
+    return;
+  }
 
-  // Try to get back camera first
-  Html5Qrcode.getCameras().then(function(devices) {
-    if (devices && devices.length) {
-      // Prefer back camera
-      var backCam = devices.find(function(d) { return d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira'); });
-      scanCameraId = backCam ? backCam.id : devices[devices.length - 1].id;
+  try {
+    html5QrCode = new Html5Qrcode('scanReader');
+    console.log('📷 Inicializando câmera...');
+    
+    Html5Qrcode.getCameras().then(function(devices) {
+      if (devices && devices.length > 0) {
+        console.log('📹 Câmeras encontradas:', devices.length);
+        
+        // Prefere câmera traseira
+        var backCam = devices.find(function(d) { 
+          return d.label.toLowerCase().includes('back') || 
+                 d.label.toLowerCase().includes('traseira') ||
+                 d.label.toLowerCase().includes('rear');
+        });
+        scanCameraId = backCam ? backCam.id : devices[devices.length - 1].id;
+        
+        console.log('🎥 Usando câmera:', scanCameraId);
 
-      document.getElementById('scanStatus').innerHTML = '<div class="flex items-center justify-center gap-2 text-[var(--green)]"><span class="pulse-dot" style="color:var(--green)"></span><span>Escaneando... Aponte para o QR code</span></div>';
+        document.getElementById('scanStatus').innerHTML = 
+          '<div class="flex items-center justify-center gap-2 text-[var(--green)]">' +
+          '  <span class="pulse-dot" style="color:var(--green)"></span>' +
+          '  <span>✓ Câmera ativada • Aponte para o QR code</span>' +
+          '</div>';
 
-      return html5QrCode.start(
-        scanCameraId,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        function(decodedText, decodedResult) {
-          window.onScanSuccess(decodedText);
-        },
-        function(errorMessage) {
-          // Scan error - ignore, keep trying
-        }
-      );
-    } else {
-      document.getElementById('scanStatus').innerHTML = '<span class="text-[var(--red)]">Nenhuma câmera encontrada.</span>';
-    }
-  }).catch(function(err) {
-    console.error('Camera error:', err);
-    document.getElementById('scanStatus').innerHTML = '<span class="text-[var(--red)]">Erro ao acessar câmera. Verifique as permissões.</span>';
-  });
+        return html5QrCode.start(
+          scanCameraId,
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+          },
+          function(decodedText, decodedResult) {
+            console.log('✅ QR Code detectado:', decodedText);
+            window.onScanSuccess(decodedText);
+          },
+          function(errorMessage) {
+            // Ignorar erros de scanning (muito verbose)
+            // console.debug('Scan attempt:', errorMessage);
+          }
+        ).catch(function(err) {
+          console.error('❌ Erro ao iniciar câmera:', err);
+          document.getElementById('scanStatus').innerHTML = 
+            '<div class="text-center text-[var(--red)]">' +
+            '<div class="font-semibold mb-1">Erro ao acessar câmera</div>' +
+            '<div class="text-xs">' + err.message + '</div>' +
+            '</div>';
+        });
+      } else {
+        console.error('❌ Nenhuma câmera encontrada no dispositivo');
+        document.getElementById('scanStatus').innerHTML = 
+          '<div class="text-center">' +
+          '<div class="text-[var(--red)] font-semibold mb-2">❌ Câmera Não Encontrada</div>' +
+          '<div class="text-xs text-[var(--fg-muted)]">' +
+          'Este dispositivo não tem câmera ou você negou permissão.<br>' +
+          'Use a entrada manual abaixo para buscar por ID.' +
+          '</div>' +
+          '</div>';
+      }
+    }).catch(function(err) {
+      console.error('❌ Erro ao listar câmeras:', err);
+      document.getElementById('scanStatus').innerHTML = 
+        '<div class="text-center">' +
+        '<div class="text-[var(--red)] font-semibold mb-2">❌ Permissão de Câmera Negada</div>' +
+        '<div class="text-xs text-[var(--fg-muted)]">' +
+        'Verifique as permissões do navegador para usar a câmera.<br>' +
+        'Use a entrada manual abaixo para buscar por ID.' +
+        '</div>' +
+        '</div>';
+    });
+  } catch (err) {
+    console.error('❌ Erro ao inicializar scanner:', err);
+    document.getElementById('scanStatus').innerHTML = 
+      '<div class="text-center text-[var(--red)]">' +
+      '<div class="font-semibold mb-1">Erro ao inicializar scanner</div>' +
+      '<div class="text-xs">' + (err.message || 'Erro desconhecido') + '</div>' +
+      '</div>';
+  }
 };
 
 window.stopScan = function() {
@@ -2208,32 +2264,89 @@ window.stopScan = function() {
 };
 
 window.onScanSuccess = function(decodedText) {
-  // Stop scanning
+  console.log('🎯 QR Code escaneado:', decodedText);
   window.stopScan();
-
-  // Parse ALL fields from QR code
+  
   var scanned = window.parseQRCodeFull(decodedText);
 
   if (scanned && scanned.id) {
-    // Show result inside the scan modal
-    window.showScanResult(scanned);
-  } else {
-    document.getElementById('scanStatus').innerHTML = '<span class="text-[var(--red)]">QR Code inválido. Tente novamente.</span>';
+    console.log('📡 Buscando dados completos do Firebase para:', scanned.id);
+    
+    // Aguarda um pouco para o Firebase enviar dados mais recentes
     setTimeout(function() {
-      window.startScan();
-    }, 1500);
+      // Busca o poka-yoke completo do Firebase
+      var dbPoka = pokaYokes.find(function(x) { 
+        return x.id === scanned.id; 
+      });
+
+      if (dbPoka) {
+        console.log('✅ Encontrado no Firebase:', dbPoka);
+        // Merge com dados do QR code
+        var merged = Object.assign({}, dbPoka, scanned);
+        window.showScanResult(merged);
+      } else {
+        console.warn('⚠️ Não encontrado no Firebase, usando dados do QR code');
+        window.showScanResult(scanned);
+      }
+    }, 500);
+  } else {
+    var errMsg = '<div class="text-center">' +
+      '<div class="text-[var(--red)] font-semibold mb-2">❌ QR Code Inválido</div>' +
+      '<div class="text-xs text-[var(--fg-muted)]">' +
+      'Não consegui ler: ' + escapeHtml(decodedText.substring(0, 30)) + '...' +
+      '</div>' +
+      '</div>';
+    document.getElementById('scanStatus').innerHTML = errMsg;
+    
+    setTimeout(function() { 
+      window.startScan(); 
+    }, 2000);
   }
 };
 
 /* Parse ALL fields from QR code text */
 window.parseQRCodeFull = function(text) {
   if (!text) return null;
+  
+  console.log('🔍 Parsing QR Code:', text); // DEBUG
+  
   var result = { id: null, nome: null, linha: null, estacao: null, raw: text };
 
-  // Extract each field
+  // Estratégia 1: Procurar por campo estruturado POKAYOKE_ID
   var idMatch = text.match(/POKAYOKE_ID:\s*([A-Z0-9\-]+)/i);
-  if (idMatch) result.id = idMatch[1].trim().toUpperCase();
+  if (idMatch) {
+    result.id = idMatch[1].trim().toUpperCase();
+    console.log('✓ Encontrou POKAYOKE_ID:', result.id);
+  }
 
+  // Estratégia 2: Procurar por padrão PY-XXX em qualquer lugar
+  if (!result.id) {
+    var pyMatch = text.match(/PY-?\d{3,4}/i);
+    if (pyMatch) {
+      result.id = pyMatch[0].toUpperCase().replace(/py(?!-)/i, 'PY-');
+      console.log('✓ Encontrou padrão PY-XXX:', result.id);
+    }
+  }
+
+  // Estratégia 3: Se for apenas números após PY
+  if (!result.id) {
+    var numMatch = text.match(/^py\s*(\d{3,4})$/i);
+    if (numMatch) {
+      result.id = 'PY-' + numMatch[1];
+      console.log('✓ Encontrou número após PY:', result.id);
+    }
+  }
+
+  // Estratégia 4: Se o texto inteiro for tipo "PY001" ou "PY-001"
+  if (!result.id) {
+    var plainMatch = text.trim().toUpperCase();
+    if (/^PY[0-9-]{3,4}$/i.test(plainMatch)) {
+      result.id = plainMatch.replace(/^PY([0-9]{3,4})$/, 'PY-$1');
+      console.log('✓ Texto inteiro é ID válido:', result.id);
+    }
+  }
+
+  // Extrait outros campos (nome, linha, estação)
   var nomeMatch = text.match(/NOME:\s*([^\n]+)/i);
   if (nomeMatch) result.nome = nomeMatch[1].trim();
 
@@ -2243,13 +2356,10 @@ window.parseQRCodeFull = function(text) {
   var estacaoMatch = text.match(/ESTACAO:\s*([^\n]+)/i);
   if (estacaoMatch) result.estacao = estacaoMatch[1].trim();
 
-  // Fallback ID detection
   if (!result.id) {
-    var fallback = text.match(/(PY-\d{3})/i);
-    if (fallback) result.id = fallback[1].toUpperCase();
-  }
-  if (!result.id && /^PY-\d{3}$/i.test(text.trim())) {
-    result.id = text.trim().toUpperCase();
+    console.error('❌ Não conseguiu extrair ID válido de:', text);
+  } else {
+    console.log('✅ QR Code parseado com sucesso:', result);
   }
 
   return result;
