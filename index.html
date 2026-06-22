@@ -1222,20 +1222,26 @@ function generateQRCodeToDataURL(text, size, callback) {
   container.style.left = '-9999px';
   container.style.top = '-9999px';
   document.body.appendChild(container);
-  var qr = new QRCode(container, {
-    text: text,
-    width: parseInt(size),
-    height: parseInt(size),
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.H
-  });
-  setTimeout(function() {
-    var canvas = container.querySelector('canvas');
-    var dataUrl = canvas ? canvas.toDataURL('image/png') : '';
-    document.body.removeChild(container);
-    if (callback) callback(dataUrl);
-  }, 50);
+  try {
+    var qr = new QRCode(container, {
+      text: text,
+      width: parseInt(size),
+      height: parseInt(size),
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M  // M = 15% recovery, enough for URLs
+    });
+    setTimeout(function() {
+      var canvas = container.querySelector('canvas');
+      var dataUrl = canvas ? canvas.toDataURL('image/png') : '';
+      if (document.body.contains(container)) document.body.removeChild(container);
+      if (callback) callback(dataUrl);
+    }, 80);
+  } catch (e) {
+    console.error('QR generation error:', e);
+    if (document.body.contains(container)) document.body.removeChild(container);
+    if (callback) callback('');
+  }
 }
 
 /* Atualiza um elemento <img> com QR code gerado client-side */
@@ -2605,7 +2611,8 @@ var _qrCheckAttempts = 0;
 /* Verifica se a URL tem ?id=PY-001 (veio de scan externo) */
 function checkUrlParam() {
   var params = new URLSearchParams(window.location.search);
-  var id = params.get('id');
+  // Tenta parametro curto 'p' primeiro, depois 'id' (legacy)
+  var id = params.get('p') || params.get('id');
   if (id) {
     _qrPokaYokeId = id.toUpperCase();
     console.log('📷 QR Code scan detectado. ID:', _qrPokaYokeId);
