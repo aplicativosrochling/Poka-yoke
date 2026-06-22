@@ -2564,15 +2564,18 @@ async function initSystem() {
     pokaYokes = FALLBACK.pokaYokes;
     linhas = FALLBACK.linhas;
     renderAll();
-    
+
     // Tenta autenticar
     const user = await initAuth();
-    
+
     // Configura listeners apenas se autenticado
     if (user) {
       setupFirebaseListeners();
     }
-    
+
+    // Verifica se veio de scan de QR code (URL param ?id=PY-001)
+    checkUrlParam();
+
     console.log('🚀 Sistema inicializado com Firebase!');
   } catch (error) {
     console.error('❌ Erro:', error);
@@ -2580,6 +2583,29 @@ async function initSystem() {
     pokaYokes = FALLBACK.pokaYokes;
     linhas = FALLBACK.linhas;
     renderAll();
+    checkUrlParam();
+  }
+}
+
+/* Verifica se a URL tem ?id=PY-001 (veio de scan externo) */
+function checkUrlParam() {
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  if (id) {
+    console.log('📷 QR Code scan detectado. ID:', id);
+    setTimeout(function() {
+      var p = pokaYokes.find(function(x) { return x.id === id.toUpperCase(); });
+      if (p) {
+        if (window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        window.switchView('pokayokes');
+        window.openDetail(id.toUpperCase());
+        showToast('Poka-Yoke aberto via QR Code: ' + id.toUpperCase(), 'success');
+      } else {
+        showToast('Poka-Yoke nao encontrado: ' + id.toUpperCase(), 'error');
+      }
+    }, 800);
   }
 }
 
