@@ -396,6 +396,7 @@
   }
 
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1234,15 +1235,14 @@ function setupFirebaseListeners() {
       snapshot.forEach((doc) => {
         data.push({ ...doc.data(), firebaseId: doc.id });
       });
-      if (data.length > 0) {
-        pokaYokes = data;
-        console.log('📡 Poka-Yokes atualizados:', data.length);
-      }
+      // FIX BUG 1: Always update array, even when empty (all docs deleted)
+      pokaYokes = data;
+      console.log('📡 Poka-Yokes atualizados:', data.length);
       renderAll();
     }, (error) => {
       console.warn('⚠️ Erro no listener Poka-Yokes:', error);
-      // Usa fallback se não tiver dados
-      if (pokaYokes.length === 0) {
+      // Usa fallback apenas se não tiver dados E não estiver online
+      if (!isFirebaseConnected && pokaYokes.length === 0) {
         pokaYokes = FALLBACK.pokaYokes;
         renderAll();
       }
@@ -1264,14 +1264,13 @@ function setupFirebaseListeners() {
       snapshot.forEach((doc) => {
         data.push({ ...doc.data(), firebaseId: doc.id });
       });
-      if (data.length > 0) {
-        linhas = data;
-        console.log('📡 Linhas atualizadas:', data.length);
-      }
+      // FIX BUG 1: Always update array, even when empty (all docs deleted)
+      linhas = data;
+      console.log('📡 Linhas atualizadas:', data.length);
       renderAll();
     }, (error) => {
       console.warn('⚠️ Erro no listener Linhas:', error);
-      if (linhas.length === 0) {
+      if (!isFirebaseConnected && linhas.length === 0) {
         linhas = FALLBACK.linhas;
         renderAll();
       }
@@ -1310,7 +1309,7 @@ async function createPokaYoke(data) {
   } catch (error) {
     console.error('❌ Erro ao criar:', error);
     // Fallback: adiciona localmente
-    const lastId = await getLastPokaYokeIdLocal();
+    const lastId = getLastPokaYokeIdLocal();
     const nextNumber = parseInt(lastId?.split('-')[1] || '0') + 1;
     const newId = `PY-${String(nextNumber).padStart(3, '0')}`;
     pokaYokes.push({ ...data, id: newId, defeitosEvitados: 0, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador' }] });
@@ -1362,11 +1361,18 @@ async function deletePokaYoke(id) {
   try {
     const docRef = doc(db, 'pokaYokes', id);
     await deleteDoc(docRef);
+    showToast(`${id} excluído do Firebase`, 'info');
   } catch (error) {
-    console.error('❌ Erro ao excluir:', error);
-    // Fallback: exclui localmente
-    pokaYokes = pokaYokes.filter(p => p.id !== id);
-    renderAll();
+    console.error('❌ Erro ao excluir do Firebase:', error);
+    // Fallback: exclui localmente apenas se offline
+    if (!isFirebaseConnected) {
+      pokaYokes = pokaYokes.filter(p => p.id !== id);
+      renderAll();
+      showToast(`${id} excluído localmente (offline)`, 'info');
+    } else {
+      showToast('Erro ao excluir: ' + error.message, 'error');
+      throw error;
+    }
   }
 }
 
@@ -1524,7 +1530,7 @@ function renderLinhas() {
     const c = ef > 95 ? '#22c55e' : ef > 85 ? '#f59e0b' : '#ef4444';
     const cor = linha.cor || '#888780';
     const corInfo = (typeof getCorInfo === 'function') ? getCorInfo(cor) : { label: '', status: '', bg: cor+'22', text: cor };
-    const statusBadge = corInfo.status ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;background:${corInfo.bg};color:${corInfo.text};margin-top:4px"><span style="width:6px;height:6px;border-radius:50%;background:${cor};flex-shrink:0"></span>${corInfo.status}</span>` : '';
+    var statusBadge = corInfo.status ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;background:' + corInfo.bg + ';color:' + corInfo.text + ';margin-top:4px"><span style="width:6px;height:6px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' + corInfo.status + '</span>' : '';
     return `<div class="card linha-card p-6"><div class="linha-cor" style="background:${cor}"></div><div class="flex items-start justify-between mb-4 pt-3"><div><div class="font-mono text-xs font-bold text-[var(--accent-bright)] mb-1">${linha.codigo}</div><h3 class="font-display font-bold text-xl">${escapeHtml(linha.nome)}</h3>${linha.descricao ? `<p class="text-sm text-[var(--fg-muted)] mt-1">${escapeHtml(linha.descricao)}</p>` : ''}${statusBadge}</div><div class="relative w-16 h-16 flex-shrink-0"><svg class="progress-ring" width="64" height="64"><circle cx="32" cy="32" r="26" stroke="#1d2532" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="26" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26-(ef/100)*2*Math.PI*26}"/></svg><div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-mono" style="color:${c}">${ef.toFixed(0)}%</div></div></div><div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Total</div><div class="font-display font-bold text-xl">${it.length}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Ativos</div><div class="font-display font-bold text-xl text-[var(--green)]">${a}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Manut.</div><div class="font-display font-bold text-xl text-[var(--amber)]">${m}</div></div></div><div class="flex items-center justify-between text-sm mb-3 pb-3 border-b border-[var(--border)]"><span class="text-[var(--fg-muted)]">Defeitos evitados</span><span class="font-mono font-bold text-[var(--accent-bright)]">${d.toLocaleString('pt-BR')}</span></div><div class="space-y-2 max-h-48 overflow-y-auto scrollbar mb-4">${it.length > 0 ? it.map(p => `<div class="flex items-center gap-2 text-sm cursor-pointer hover:bg-[var(--bg-3)] p-2 rounded-lg transition" onclick="window.openDetail('${p.id}')"><span class="w-1.5 h-1.5 rounded-full" style="background:${STATUS_CONFIG[p.status]?.color || '#8a98ac'}"></span><span class="font-mono text-xs text-[var(--fg-muted)]">${p.id}</span><span class="flex-1 truncate">${escapeHtml(p.nome)}</span><i data-lucide="chevron-right" class="text-[var(--fg-dim)]" style="width:14px;height:14px"></i></div>`).join('') : `<div class="text-sm text-[var(--fg-dim)] text-center py-4">Nenhum dispositivo</div>`}</div><div class="flex gap-2 pt-3 border-t border-[var(--border)]"><button class="btn-ghost px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openEditarLinha('${linha.firebaseId || linha.codigo}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Editar</button><button class="btn-danger px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openDeleteLinhaModal('${linha.firebaseId || linha.codigo}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Excluir</button></div></div>`;
   }).join('');
   lucide.createIcons();
@@ -2253,42 +2259,53 @@ function getCorInfo(hex) {
 window.getCorInfo = getCorInfo;
 
 function initColorPicker(containerId, selectedHex) {
-  const grid = document.getElementById(containerId);
+  var grid = document.getElementById(containerId);
   if (!grid) return;
-  const cols = 4;
-  let html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
-  COR_SISTEMA.forEach(c => {
-    const checked = (c.hex === selectedHex) ? 'checked' : '';
-    html += \`<label style="cursor:pointer;position:relative;" title="\${c.label} — \${c.status}">
-      <input type="radio" name="linhaCor" value="\${c.hex}" \${checked} 
-        style="position:absolute;opacity:0;width:0;height:0"
-        onchange="document.querySelectorAll('[data-color-swatch]').forEach(el=>el.style.outline='none');
-          this.parentElement.querySelector('[data-color-swatch]').style.outline='3px solid \${c.hex}';
-          this.parentElement.querySelector('[data-color-swatch]').style.outlineOffset='2px';
-          const p=document.getElementById('colorLegendPreview');
-          p.className='mt-3 flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium';
-          p.style.background='\${c.bg}';p.style.color='\${c.text}';
-          p.innerHTML='<span style='width:10px;height:10px;border-radius:50%;background:\${c.hex};flex-shrink:0'></span><strong>\${c.label}</strong> — \${c.status}: \${c.desc}';">
-      <div data-color-swatch style="background:\${c.hex};border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid rgba(0,0,0,0.08);transition:all 0.15s;outline:\${checked?'3px solid '+c.hex:'none'};outline-offset:\${checked?'2px':'0'}">
-        <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.3);display:block"></span>
-        <span style="font-size:9px;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);text-align:center;line-height:1.2;letter-spacing:0.02em">\${c.label}</span>
-      </div>
-    </label>\`;
+  var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+  COR_SISTEMA.forEach(function(c) {
+    var isChecked = c.hex === selectedHex;
+    var outline = isChecked ? '3px solid ' + c.hex : 'none';
+    var outlineOffset = isChecked ? '2px' : '0';
+    html += '<label style="cursor:pointer;position:relative;" title="' + c.label + ' \u2014 ' + c.status + '">'
+          + '<input type="radio" name="linhaCor" value="' + c.hex + '" ' + (isChecked ? 'checked' : '') + ' '
+          + 'style="position:absolute;opacity:0;width:0;height:0" '
+          + 'onchange="window._onColorChange(this,\'' + c.hex + '\',\'' + c.bg + '\',\'' + c.text + '\',\'' + c.label + '\',\'' + c.status + '\',\'' + c.desc.replace(/'/g,"\\x27") + '\')">'
+          + '<div data-color-swatch style="background:' + c.hex + ';border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid rgba(0,0,0,0.08);transition:all 0.15s;outline:' + outline + ';outline-offset:' + outlineOffset + '">'
+          + '<span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.3);display:block"></span>'
+          + '<span style="font-size:9px;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);text-align:center;line-height:1.2">' + c.label + '</span>'
+          + '</div></label>';
   });
   html += '</div>';
   grid.innerHTML = html;
-
-  // Show preview for default selected
-  const sel = COR_SISTEMA.find(c => c.hex === selectedHex) || COR_SISTEMA[0];
-  const p = document.getElementById('colorLegendPreview');
+  // Preview for current selection
+  var sel = COR_SISTEMA.find(function(c){ return c.hex === selectedHex; }) || COR_SISTEMA[0];
+  var p = document.getElementById('colorLegendPreview');
   if (p) {
-    p.className = 'mt-3 flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium';
+    p.style.display = 'flex';
     p.style.background = sel.bg;
     p.style.color = sel.text;
-    p.innerHTML = \`<span style="width:10px;height:10px;border-radius:50%;background:\${sel.hex};flex-shrink:0"></span><strong>\${sel.label}</strong> — \${sel.status}: \${sel.desc}\`;
+    p.innerHTML = '<span style="width:10px;height:10px;border-radius:50%;background:' + sel.hex + ';flex-shrink:0;display:inline-block"></span>'
+                + '<strong>' + sel.label + '</strong> \u2014 ' + sel.status + ': ' + sel.desc;
   }
 }
 window.initColorPicker = initColorPicker;
+
+// Called from onchange inline handler
+window._onColorChange = function(input, hex, bg, text, label, status, desc) {
+  document.querySelectorAll('[data-color-swatch]').forEach(function(el) {
+    el.style.outline = 'none';
+  });
+  var swatch = input.parentElement.querySelector('[data-color-swatch]');
+  if (swatch) { swatch.style.outline = '3px solid ' + hex; swatch.style.outlineOffset = '2px'; }
+  var p = document.getElementById('colorLegendPreview');
+  if (p) {
+    p.style.display = 'flex';
+    p.style.background = bg;
+    p.style.color = text;
+    p.innerHTML = '<span style="width:10px;height:10px;border-radius:50%;background:' + hex + ';flex-shrink:0;display:inline-block"></span>'
+                + '<strong>' + label + '</strong> \u2014 ' + status + ': ' + desc;
+  }
+};
 
 console.log('✅ Sistema pronto!');
 
