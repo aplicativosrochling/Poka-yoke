@@ -1021,7 +1021,7 @@ function getQRText(p) {
   var base = window.location.href.split('?')[0].split('#')[0];
   var dir  = base.substring(0, base.lastIndexOf('/') + 1);
   if (window.location.protocol === 'file:') {
-    return `POKAYOKE_ID:${p.id}\nNOME:${p.nome}\nLINHA:${p.linha}\nESTACAO:${p.estacao}`;
+    return `POKAYOKE_ID:${p.id}\nNOME:${p.nome}\nPART_NUMBER:${p.partNumber || 'N/A'}\nPART_NAME:${p.partName || 'N/A'}\nLINHA:${p.linha}\nESTACAO:${p.estacao}`;
   }
   return dir + 'view.html?p=' + encodeURIComponent(p.id);
 }
@@ -2045,10 +2045,14 @@ window.openDetail = function(id) {
         <div class="grid grid-cols-2 gap-4">
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="factory" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Linha</div><div class="text-sm font-semibold">${linhaNome}</div></div></div>
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="map-pin" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Estação</div><div class="text-sm font-mono font-semibold">${p.estacao}</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="package" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Number</div><div class="text-sm font-mono font-semibold">${p.partNumber || '—'}</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="box" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Name</div><div class="text-sm font-semibold">${p.partName || '—'}</div></div></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="user" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Responsável</div><div class="text-sm font-semibold">${escapeHtml(p.responsavel)}</div></div></div>
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="calendar" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Última Verif.</div><div class="text-sm font-mono">${fmtDate(p.ultimaVerificacao)}</div></div></div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4">
            <div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima Verif.</div><div class="text-sm font-mono ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg)]'}">${fmtDate(p.proximaVerificacao)}</div><div class="text-[10px] ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg-dim)]'} mt-0.5">${d < 0 ? `Vencido há ${Math.abs(d)}d` : `Em ${d}d`}</div></div>
         </div>
         ${p.descricao ? `<div class="bg-[var(--bg-3)] rounded-lg p-4 text-sm text-[var(--fg-muted)] leading-relaxed">${escapeHtml(p.descricao)}</div>` : ''}
