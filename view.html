@@ -301,20 +301,20 @@
     <div class="section-title">Informações Técnicas</div>
     <div class="info-grid">
       <div class="info-card">
-        <div class="info-card-label">Part Number</div>
-        <div class="info-card-value mono" id="infoPartNumber">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Part Name</div>
-        <div class="info-card-value" id="infoPartName">—</div>
-      </div>
-      <div class="info-card">
         <div class="info-card-label">Linha</div>
         <div class="info-card-value" id="infoLinha">—</div>
       </div>
       <div class="info-card">
         <div class="info-card-label">Estação</div>
         <div class="info-card-value mono" id="infoEstacao">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Part Number</div>
+        <div class="info-card-value mono" id="infoPartNumber">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Part Name</div>
+        <div class="info-card-value" id="infoPartName">—</div>
       </div>
       <div class="info-card">
         <div class="info-card-label">Responsável</div>
@@ -433,6 +433,8 @@ function render(p) {
   // Info cards
   document.getElementById('infoLinha').textContent       = p.linha || '—';
   document.getElementById('infoEstacao').textContent     = p.estacao || '—';
+  document.getElementById('infoPartNumber').textContent  = p.partNumber || '—';
+  document.getElementById('infoPartName').textContent    = p.partName || '—';
   document.getElementById('infoResponsavel').textContent = p.responsavel || '—';
   document.getElementById('infoUltima').textContent      = fmtDate(p.ultimaVerificacao);
 
