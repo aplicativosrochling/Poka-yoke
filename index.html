@@ -674,6 +674,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       </div>
       <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Nome *</label><input type="text" id="fNome" class="input" required placeholder="Ex: Sensor de Presença"></div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Part Number</label><input type="text" id="fPartNumber" class="input font-mono" placeholder="Ex: PN-12345"></div>
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Part Name</label><input type="text" id="fPartName" class="input" placeholder="Ex: Front Door Panel"></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Linha *</label><select id="fLinha" class="input" required><option value="">Selecione...</option></select></div>
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Estação *</label><input type="text" id="fEstacao" class="input font-mono" required placeholder="Ex: EST-A04"></div>
       </div>
@@ -1872,6 +1876,8 @@ window.openModal = function(id = null) {
     document.getElementById('submitLabel').textContent = 'Salvar';
     document.getElementById('fId').value = p.id;
     document.getElementById('fNome').value = p.nome;
+    document.getElementById('fPartNumber').value = p.partNumber || '';
+    document.getElementById('fPartName').value = p.partName || '';
     document.getElementById('fLinha').value = p.linha;
     document.getElementById('fEstacao').value = p.estacao;
     document.getElementById('fTipo').value = p.tipo;
@@ -1912,6 +1918,8 @@ document.getElementById('pokaYokeForm').addEventListener('submit', async (e) => 
   e.preventDefault();
   const data = {
     nome: document.getElementById('fNome').value.trim(),
+    partNumber: document.getElementById('fPartNumber').value.trim(),
+    partName: document.getElementById('fPartName').value.trim(),
     linha: document.getElementById('fLinha').value,
     estacao: document.getElementById('fEstacao').value.trim().toUpperCase(),
     tipo: document.getElementById('fTipo').value,
@@ -2238,6 +2246,172 @@ window.setViewMode = function(mode) {
   }
   renderPokaYokes();
 };
+
+// ============================================================
+// MODAL FUNCTIONS - LINHAS (Production Lines)
+// ============================================================
+
+window.openLinhaModal = function(id) {
+  editingLinhaId = id || null;
+  const form = document.getElementById('linhaForm');
+  const overlay = document.getElementById('linhaModalOverlay');
+  const title = document.getElementById('linhaModalTitle');
+  const subtitle = document.getElementById('linhaModalSubtitle');
+  const submitLabel = document.getElementById('linhaSubmitLabel');
+  
+  if (id) {
+    // Edit mode
+    const linha = linhas.find(x => x.firebaseId === id || x.codigo === id);
+    if (!linha) return;
+    
+    title.textContent = 'Editar Linha';
+    subtitle.textContent = 'Atualize as informações da linha';
+    submitLabel.textContent = 'Atualizar';
+    
+    document.getElementById('fLinhaCodigo').value = linha.codigo;
+    document.getElementById('fLinhaNome').value = linha.nome;
+    document.getElementById('fLinhaDescricao').value = linha.descricao || '';
+    
+    initColorPicker('colorPickerGrid', linha.cor || '#1D9E75');
+  } else {
+    // Create mode
+    title.textContent = 'Nova Linha';
+    subtitle.textContent = 'Cadastre uma nova linha';
+    submitLabel.textContent = 'Criar';
+    
+    form.reset();
+    initColorPicker('colorPickerGrid', '#1D9E75');
+  }
+  
+  overlay.classList.remove('hidden');
+  lucide.createIcons();
+};
+
+window.closeLinhaModal = function() {
+  document.getElementById('linhaModalOverlay').classList.add('hidden');
+  document.getElementById('linhaForm').reset();
+  editingLinhaId = null;
+};
+
+window.openEditarLinha = function(id) {
+  window.openLinhaModal(id);
+};
+
+// ============================================================
+// CRUD FUNCTIONS - LINHAS
+// ============================================================
+
+async function createLinha(data) {
+  try {
+    if (isFirebaseConnected) {
+      const newDoc = await addDoc(collection(db, 'linhas'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        createdBy: getCurrentUserId()
+      });
+      console.log('✅ Linha criada no Firebase:', newDoc.id);
+      return newDoc.id;
+    } else {
+      const newLinha = {
+        ...data,
+        firebaseId: 'local_' + Date.now(),
+        createdAt: new Date().toISOString()
+      };
+      linhas.push(newLinha);
+      renderAll();
+      console.log('✅ Linha criada localmente');
+      return newLinha.firebaseId;
+    }
+  } catch (error) {
+    console.error('❌ Erro ao criar linha:', error);
+    throw error;
+  }
+}
+
+async function updateLinha(id, data) {
+  try {
+    if (isFirebaseConnected) {
+      const linha = linhas.find(x => x.firebaseId === id);
+      if (linha) {
+        const docRef = doc(db, 'linhas', id);
+        await updateDoc(docRef, {
+          ...data,
+          updatedAt: serverTimestamp(),
+          updatedBy: getCurrentUserId()
+        });
+        console.log('✅ Linha atualizada no Firebase:', id);
+      }
+    } else {
+      const idx = linhas.findIndex(x => x.firebaseId === id || x.codigo === id);
+      if (idx >= 0) {
+        linhas[idx] = { ...linhas[idx], ...data, updatedAt: new Date().toISOString() };
+        renderAll();
+        console.log('✅ Linha atualizada localmente');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao atualizar linha:', error);
+    throw error;
+  }
+}
+
+async function deleteLinha(id) {
+  try {
+    if (isFirebaseConnected) {
+      const docRef = doc(db, 'linhas', id);
+      await deleteDoc(docRef);
+      console.log('✅ Linha deletada do Firebase:', id);
+    } else {
+      const idx = linhas.findIndex(x => x.firebaseId === id || x.codigo === id);
+      if (idx >= 0) {
+        linhas.splice(idx, 1);
+        renderAll();
+        console.log('✅ Linha deletada localmente');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao deletar linha:', error);
+    throw error;
+  }
+}
+
+// Form submission for linhas
+document.addEventListener('DOMContentLoaded', function() {
+  const linhaForm = document.getElementById('linhaForm');
+  if (linhaForm) {
+    linhaForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        codigo: document.getElementById('fLinhaCodigo').value.trim().toUpperCase(),
+        nome: document.getElementById('fLinhaNome').value.trim(),
+        descricao: document.getElementById('fLinhaDescricao').value.trim(),
+        cor: document.querySelector('input[name="linhaCor"]:checked')?.value || '#1D9E75'
+      };
+      
+      // Validate required fields
+      if (!data.codigo || !data.nome) {
+        showToast('Código e Nome são obrigatórios', 'error');
+        return;
+      }
+      
+      try {
+        if (editingLinhaId) {
+          await updateLinha(editingLinhaId, data);
+          showToast(`${data.codigo} atualizada com sucesso`, 'success');
+        } else {
+          await createLinha(data);
+          showToast(`${data.codigo} criada com sucesso`, 'success');
+        }
+        window.closeLinhaModal();
+      } catch (error) {
+        console.error('Erro:', error);
+        showToast('Erro ao salvar linha', 'error');
+      }
+    });
+  }
+});
+
 
 // ============================================================
 // QR CODE FROM URL
