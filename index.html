@@ -458,10 +458,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('pokayokes')" title="Ver todos os poka-yokes"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(255,107,26,0.12)] flex items-center justify-center"><i data-lucide="shield-check" class="text-[var(--accent-bright)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Poka-Yokes</div><div class="font-display font-bold text-3xl" id="kpiTotal">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-2">Em <span id="kpiLinhasCount">0</span> linhas</div></div>
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('pokayokes');setTimeout(()=>{window.currentFilters&&(window.currentFilters.status='Ativo');window.renderPokaYokes&&window.renderPokaYokes();},200)" title="Ver dispositivos ativos"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--green)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="kpiAtivos">0</div><div class="stat-bar mt-3"><div class="stat-bar-fill" id="kpiAtivosBar" style="width:0%;background:linear-gradient(90deg,var(--green),#4ade80)"></div></div></div>
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('manutencao')" title="Ver manutenções"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="wrench" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Manutenção</div><div class="font-display font-bold text-3xl" id="kpiManut">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-2">Tempo médio: 2.4h</div></div>
-        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="target" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Defeitos Evitados (mês)</div><div class="font-display font-bold text-3xl" id="kpiDefeitos">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="target" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Eficiência Média</div><div class="font-display font-bold text-3xl" id="kpiEficiencia">0%</div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Defeitos Evitados por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Últimos 6 meses</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas"></canvas></div></div>
+        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Eficiência Média por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Últimos 6 meses</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas"></canvas></div></div>
         <div class="card p-5 cursor-pointer" onclick="window.switchView('pokayokes')" title="Ver poka-yokes por tipo"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Distribuição por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Categorização atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:220px"><canvas id="chartTipos"></canvas></div><div class="mt-4 space-y-2" id="chartTiposLegend"></div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -582,10 +582,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     <section id="view-relatorios" class="view">
       <div class="mb-6"><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Análise Avançada</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Relatórios</h1></div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Tendência de Defeitos Evitados</h3><p class="text-xs text-[var(--fg-muted)] mb-4">12 meses</p><div style="height:260px"><canvas id="chartTrend"></canvas></div></div>
+        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Tendência de Eficiência</h3><p class="text-xs text-[var(--fg-muted)] mb-4">12 meses</p><div style="height:260px"><canvas id="chartTrend"></canvas></div></div>
         <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Eficiência por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Média ponderada</p><div style="height:260px"><canvas id="chartTipoEf"></canvas></div></div>
       </div>
-      <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Top 10 Performance</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Ranking por defeitos evitados</p><div id="topPerformers" class="space-y-2"></div></div>
+      <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Top 10 Performance</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Ranking por eficiência</p><div id="topPerformers" class="space-y-2"></div></div>
     </section>
     
     <!-- MANUTENÇÃO -->
@@ -972,11 +972,11 @@ console.log('🔥 Firebase inicializado');
 
 const FALLBACK = {
   pokaYokes: [
-    { id: 'PY-001', nome: 'Sensor de Presença de Clipe - Porta Dianteira', linha: 'LINHA-A', estacao: 'EST-A04', tipo: 'Sensor', status: 'Ativo', responsavel: 'Carlos Mendes', eficiencia: 98.5, defeitosEvitados: 1247, ultimaVerificacao: '2024-12-10', proximaVerificacao: '2025-01-10', descricao: 'Sensor óptico que verifica presença e posição dos clipes.', historico: [{ data: '2024-12-10', evento: 'Calibração realizada', usuario: 'Carlos Mendes' }] },
-    { id: 'PY-002', nome: 'Guia de Posicionamento - Para-choque Traseiro', linha: 'LINHA-B', estacao: 'EST-B02', tipo: 'Mecânico', status: 'Ativo', responsavel: 'Roberto Lima', eficiencia: 96.2, defeitosEvitados: 892, ultimaVerificacao: '2024-12-08', proximaVerificacao: '2025-01-08', descricao: 'Gabarito mecânico que garante o posicionamento correto.', historico: [{ data: '2024-12-08', evento: 'Inspeção visual', usuario: 'Roberto Lima' }] },
-    { id: 'PY-003', nome: 'Verificador de Torque - Parafusos M8', linha: 'LINHA-A', estacao: 'EST-A07', tipo: 'Sensor', status: 'Manutenção', responsavel: 'Ana Silva', eficiencia: 88.4, defeitosEvitados: 2103, ultimaVerificacao: '2024-12-05', proximaVerificacao: '2024-12-20', descricao: 'Sistema de chave de torque com feedback em tempo real.', historico: [{ data: '2024-12-12', evento: 'Em manutenção', usuario: 'Ana Silva' }] },
-    { id: 'PY-004', nome: 'Scanner de Código de Cor - Componente Interno', linha: 'LINHA-C', estacao: 'EST-C01', tipo: 'Óptico', status: 'Ativo', responsavel: 'Marcos Tavares', eficiencia: 99.1, defeitosEvitados: 1856, ultimaVerificacao: '2024-12-09', proximaVerificacao: '2025-01-09', descricao: 'Sistema de visão que valida a cor do componente.', historico: [{ data: '2024-12-09', evento: 'Calibração de câmera', usuario: 'Marcos Tavares' }] },
-    { id: 'PY-005', nome: 'Sensor Pneumático de Vedação', linha: 'LINHA-D', estacao: 'EST-D03', tipo: 'Pneumático', status: 'Ativo', responsavel: 'Juliana Costa', eficiencia: 97.3, defeitosEvitados: 743, ultimaVerificacao: '2024-12-11', proximaVerificacao: '2025-01-11', descricao: 'Verifica a vedação pneumática do conjunto.', historico: [{ data: '2024-12-11', evento: 'Teste funcional OK', usuario: 'Juliana Costa' }] }
+    { id: 'PY-001', nome: 'Sensor de Presença de Clipe - Porta Dianteira', linha: 'LINHA-A', estacao: 'EST-A04', tipo: 'Sensor', status: 'Ativo', responsavel: 'Carlos Mendes', eficiencia: 98.5, ultimaVerificacao: '2024-12-10', proximaVerificacao: '2025-01-10', descricao: 'Sensor óptico que verifica presença e posição dos clipes.', historico: [{ data: '2024-12-10', evento: 'Calibração realizada', usuario: 'Carlos Mendes' }] },
+    { id: 'PY-002', nome: 'Guia de Posicionamento - Para-choque Traseiro', linha: 'LINHA-B', estacao: 'EST-B02', tipo: 'Mecânico', status: 'Ativo', responsavel: 'Roberto Lima', eficiencia: 96.2, ultimaVerificacao: '2024-12-08', proximaVerificacao: '2025-01-08', descricao: 'Gabarito mecânico que garante o posicionamento correto.', historico: [{ data: '2024-12-08', evento: 'Inspeção visual', usuario: 'Roberto Lima' }] },
+    { id: 'PY-003', nome: 'Verificador de Torque - Parafusos M8', linha: 'LINHA-A', estacao: 'EST-A07', tipo: 'Sensor', status: 'Manutenção', responsavel: 'Ana Silva', eficiencia: 88.4, ultimaVerificacao: '2024-12-05', proximaVerificacao: '2024-12-20', descricao: 'Sistema de chave de torque com feedback em tempo real.', historico: [{ data: '2024-12-12', evento: 'Em manutenção', usuario: 'Ana Silva' }] },
+    { id: 'PY-004', nome: 'Scanner de Código de Cor - Componente Interno', linha: 'LINHA-C', estacao: 'EST-C01', tipo: 'Óptico', status: 'Ativo', responsavel: 'Marcos Tavares', eficiencia: 99.1, ultimaVerificacao: '2024-12-09', proximaVerificacao: '2025-01-09', descricao: 'Sistema de visão que valida a cor do componente.', historico: [{ data: '2024-12-09', evento: 'Calibração de câmera', usuario: 'Marcos Tavares' }] },
+    { id: 'PY-005', nome: 'Sensor Pneumático de Vedação', linha: 'LINHA-D', estacao: 'EST-D03', tipo: 'Pneumático', status: 'Ativo', responsavel: 'Juliana Costa', eficiencia: 97.3, ultimaVerificacao: '2024-12-11', proximaVerificacao: '2025-01-11', descricao: 'Verifica a vedação pneumática do conjunto.', historico: [{ data: '2024-12-11', evento: 'Teste funcional OK', usuario: 'Juliana Costa' }] }
   ],
   linhas: [
     { codigo: 'LINHA-A', nome: 'Painéis de Porta', descricao: 'Linha de montagem de painéis de porta', cor: '#ff6b1a' },
@@ -1206,7 +1206,6 @@ async function createPokaYoke(data) {
     const docData = {
       ...data,
       id: newId,
-      defeitosEvitados: 0,
       historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo criado', usuario: 'Operador' }],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -1219,7 +1218,7 @@ async function createPokaYoke(data) {
     const lastId = getLastPokaYokeIdLocal();
     const nextNumber = parseInt(lastId?.split('-')[1] || '0') + 1;
     const newId = `PY-${String(nextNumber).padStart(3, '0')}`;
-    pokaYokes.push({ ...data, id: newId, defeitosEvitados: 0, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador' }] });
+    pokaYokes.push({ ...data, id: newId, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador' }] });
     renderAll();
     return newId;
   }
@@ -1588,13 +1587,6 @@ window.showScanResult = function(scanned) {
     html += '</div>';
   }
 
-  if (p.defeitosEvitados) {
-    html += '<div class="mt-3 bg-[var(--bg-3)] rounded-lg p-3 flex items-center justify-between">';
-    html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Defeitos Evitados</div>';
-    html += '<div class="font-display font-bold text-xl text-[var(--accent-bright)]">' + p.defeitosEvitados.toLocaleString('pt-BR') + '</div>';
-    html += '</div>';
-  }
-
   if (p.descricao) {
     html += '<div class="mt-3 bg-[var(--bg-3)] rounded-lg p-3">';
     html += '<div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Descrição</div>';
@@ -1687,12 +1679,12 @@ function renderDashboard() {
   const t = pokaYokes.length;
   const a = pokaYokes.filter(p => p.status === 'Ativo').length;
   const m = pokaYokes.filter(p => p.status === 'Manutenção').length;
-  const d = pokaYokes.reduce((s, p) => s + (p.defeitosEvitados || 0), 0);
+  const efMedia = t > 0 ? pokaYokes.reduce((s, p) => s + (p.eficiencia || 0), 0) / t : 0;
   
   animateCount(document.getElementById('kpiTotal'), t);
   animateCount(document.getElementById('kpiAtivos'), a);
   animateCount(document.getElementById('kpiManut'), m);
-  animateCount(document.getElementById('kpiDefeitos'), d);
+  document.getElementById('kpiEficiencia').textContent = efMedia.toFixed(1) + '%';
   document.getElementById('kpiLinhasCount').textContent = linhas.length;
   
   const bar = document.getElementById('kpiAtivosBar');
@@ -1778,7 +1770,7 @@ function createCard(p, q = '') {
   const isChecked = selectedForPrint.has(p.id) ? 'checked' : '';
   const linhaNome = getLinhaNome(p.linha);
   const linhaCor = getLinhaCor(p.linha);
-  return `<div class="card card-glow p-5 cursor-pointer relative" onclick="window.openDetail('${p.id}')"><div class="absolute top-4 right-4 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></div><div class="flex items-start justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${tc}"></span><span class="font-mono text-xs font-bold text-[var(--fg-muted)]">${p.id}</span></div></div><h3 class="font-display font-bold text-base mb-2 leading-tight line-clamp-2" style="min-height:44px">${highlight(p.nome, q)}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${linhaCor}"></span><span>${linhaNome} • ${p.estacao}</span></div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Tipo</div><div class="text-sm font-semibold" style="color:${tc}">${p.tipo}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Defeitos</div><div class="text-sm font-mono font-bold">${(p.defeitosEvitados || 0).toLocaleString('pt-BR')}</div></div></div><div class="mb-4"><div class="flex items-center justify-between mb-1.5"><span class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</span><span class="text-sm font-mono font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div><div class="stat-bar"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:linear-gradient(90deg,${c},${c}cc)"></div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="badge ${s.cls}"><span class="pulse-dot" style="color:${s.color}"></span>${p.status}</span><div class="flex gap-1" onclick="event.stopPropagation()"><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></div></div>`;
+  return `<div class="card card-glow p-5 cursor-pointer relative" onclick="window.openDetail('${p.id}')"><div class="absolute top-4 right-4 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></div><div class="flex items-start justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${tc}"></span><span class="font-mono text-xs font-bold text-[var(--fg-muted)]">${p.id}</span></div></div><h3 class="font-display font-bold text-base mb-2 leading-tight line-clamp-2" style="min-height:44px">${highlight(p.nome, q)}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${linhaCor}"></span><span>${linhaNome} • ${p.estacao}</span></div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Tipo</div><div class="text-sm font-semibold" style="color:${tc}">${p.tipo}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Responsável</div><div class="text-sm font-semibold truncate">${escapeHtml(p.responsavel || '—')}</div></div></div><div class="mb-4"><div class="flex items-center justify-between mb-1.5"><span class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</span><span class="text-sm font-mono font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div><div class="stat-bar"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:linear-gradient(90deg,${c},${c}cc)"></div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="badge ${s.cls}"><span class="pulse-dot" style="color:${s.color}"></span>${p.status}</span><div class="flex gap-1" onclick="event.stopPropagation()"><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></div></div>`;
 }
 
 function createRow(p, q = '') {
@@ -1810,22 +1802,19 @@ function renderLinhas() {
     const it = pokaYokes.filter(p => p.linha === linha.codigo);
     const a = it.filter(p => p.status === 'Ativo').length;
     const m = it.filter(p => p.status === 'Manutenção').length;
-    const d = it.reduce((s, p) => s + (p.defeitosEvitados || 0), 0);
     const ef = it.filter(p => p.status !== 'Inativo').reduce((s, p) => s + p.eficiencia, 0) / (it.filter(p => p.status !== 'Inativo').length || 1);
     const c = ef > 95 ? '#22c55e' : ef > 85 ? '#f59e0b' : '#ef4444';
     const cor = linha.cor || '#888780';
-    return `<div class="card linha-card p-6"><div class="linha-cor" style="background:${cor}"></div><div class="flex items-start justify-between mb-4 pt-3"><div><div class="font-mono text-xs font-bold text-[var(--accent-bright)] mb-1">${linha.codigo}</div><h3 class="font-display font-bold text-xl">${escapeHtml(linha.nome)}</h3>${linha.descricao ? `<p class="text-sm text-[var(--fg-muted)] mt-1">${escapeHtml(linha.descricao)}</p>` : ''}</div><div class="relative w-16 h-16 flex-shrink-0"><svg class="progress-ring" width="64" height="64"><circle cx="32" cy="32" r="26" stroke="#1d2532" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="26" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26-(ef/100)*2*Math.PI*26}"/></svg><div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-mono" style="color:${c}">${ef.toFixed(0)}%</div></div></div><div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Total</div><div class="font-display font-bold text-xl">${it.length}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Ativos</div><div class="font-display font-bold text-xl text-[var(--green)]">${a}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Manut.</div><div class="font-display font-bold text-xl text-[var(--amber)]">${m}</div></div></div><div class="flex items-center justify-between text-sm mb-3 pb-3 border-b border-[var(--border)]"><span class="text-[var(--fg-muted)]">Defeitos evitados</span><span class="font-mono font-bold text-[var(--accent-bright)]">${d.toLocaleString('pt-BR')}</span></div><div class="space-y-2 max-h-48 overflow-y-auto scrollbar mb-4">${it.length > 0 ? it.map(p => `<div class="flex items-center gap-2 text-sm cursor-pointer hover:bg-[var(--bg-3)] p-2 rounded-lg transition" onclick="window.openDetail('${p.id}')"><span class="w-1.5 h-1.5 rounded-full" style="background:${STATUS_CONFIG[p.status]?.color || '#8a98ac'}"></span><span class="font-mono text-xs text-[var(--fg-muted)]">${p.id}</span><span class="flex-1 truncate">${escapeHtml(p.nome)}</span><i data-lucide="chevron-right" class="text-[var(--fg-dim)]" style="width:14px;height:14px"></i></div>`).join('') : `<div class="text-sm text-[var(--fg-dim)] text-center py-4">Nenhum dispositivo</div>`}</div><div class="flex gap-2 pt-3 border-t border-[var(--border)]"><button class="btn-ghost px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openEditarLinha('${linha.firebaseId || linha.codigo}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Editar</button><button class="btn-danger px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openDeleteLinhaModal('${linha.firebaseId || linha.codigo}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Excluir</button></div></div>`;
+    return `<div class="card linha-card p-6"><div class="linha-cor" style="background:${cor}"></div><div class="flex items-start justify-between mb-4 pt-3"><div><div class="font-mono text-xs font-bold text-[var(--accent-bright)] mb-1">${linha.codigo}</div><h3 class="font-display font-bold text-xl">${escapeHtml(linha.nome)}</h3>${linha.descricao ? `<p class="text-sm text-[var(--fg-muted)] mt-1">${escapeHtml(linha.descricao)}</p>` : ''}</div><div class="relative w-16 h-16 flex-shrink-0"><svg class="progress-ring" width="64" height="64"><circle cx="32" cy="32" r="26" stroke="#1d2532" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="26" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26-(ef/100)*2*Math.PI*26}"/></svg><div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-mono" style="color:${c}">${ef.toFixed(0)}%</div></div></div><div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Total</div><div class="font-display font-bold text-xl">${it.length}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Ativos</div><div class="font-display font-bold text-xl text-[var(--green)]">${a}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Manut.</div><div class="font-display font-bold text-xl text-[var(--amber)]">${m}</div></div></div><div class="space-y-2 max-h-48 overflow-y-auto scrollbar mb-4">${it.length > 0 ? it.map(p => `<div class="flex items-center gap-2 text-sm cursor-pointer hover:bg-[var(--bg-3)] p-2 rounded-lg transition" onclick="window.openDetail('${p.id}')"><span class="w-1.5 h-1.5 rounded-full" style="background:${STATUS_CONFIG[p.status]?.color || '#8a98ac'}"></span><span class="font-mono text-xs text-[var(--fg-muted)]">${p.id}</span><span class="flex-1 truncate">${escapeHtml(p.nome)}</span><i data-lucide="chevron-right" class="text-[var(--fg-dim)]" style="width:14px;height:14px"></i></div>`).join('') : `<div class="text-sm text-[var(--fg-dim)] text-center py-4">Nenhum dispositivo</div>`}</div><div class="flex gap-2 pt-3 border-t border-[var(--border)]"><button class="btn-ghost px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openEditarLinha('${linha.firebaseId || linha.codigo}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Editar</button><button class="btn-danger px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 flex items-center justify-center gap-1" onclick="window.openDeleteLinhaModal('${linha.firebaseId || linha.codigo}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Excluir</button></div></div>`;
   }).join('');
   lucide.createIcons();
 }
 
 // Relatórios (simplificado)
 function renderRelatorios() {
-  const t = pokaYokes.reduce((s, p) => s + (p.defeitosEvitados || 0), 0);
-  const tp = [...pokaYokes].sort((a, b) => (b.defeitosEvitados || 0) - (a.defeitosEvitados || 0)).slice(0, 10);
-  const mx = tp[0]?.defeitosEvitados || 1;
+  const tp = [...pokaYokes].sort((a, b) => (b.eficiencia || 0) - (a.eficiencia || 0)).slice(0, 10);
   document.getElementById('topPerformers').innerHTML = tp.length > 0 ? tp.map((p, i) => 
-    `<div class="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-3)] hover:bg-[rgba(255,107,26,0.05)] transition cursor-pointer" onclick="window.openDetail('${p.id}')"><div class="w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-sm ${i < 3 ? 'bg-[var(--accent)] text-[#0a0d12]' : 'bg-[var(--bg-2)] text-[var(--fg-muted)]'}">${i + 1}</div><div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">${escapeHtml(p.nome)}</div><div class="text-[11px] text-[var(--fg-dim)] font-mono">${p.id} • ${p.estacao}</div></div><div class="flex-1 max-w-[200px]"><div class="stat-bar"><div class="stat-bar-fill" style="width:${((p.defeitosEvitados || 0) / mx * 100)}%;background:linear-gradient(90deg,var(--accent),var(--accent-bright))"></div></div></div><div class="text-right"><div class="font-mono font-bold text-sm">${(p.defeitosEvitados || 0).toLocaleString('pt-BR')}</div><div class="text-[10px] text-[var(--fg-dim)]">defeitos</div></div></div>`
+    `<div class="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-3)] hover:bg-[rgba(255,107,26,0.05)] transition cursor-pointer" onclick="window.openDetail('${p.id}')"><div class="w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-sm ${i < 3 ? 'bg-[var(--accent)] text-[#0a0d12]' : 'bg-[var(--bg-2)] text-[var(--fg-muted)]'}">${i + 1}</div><div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">${escapeHtml(p.nome)}</div><div class="text-[11px] text-[var(--fg-dim)] font-mono">${p.id} • ${p.estacao}</div></div><div class="flex-1 max-w-[200px]"><div class="stat-bar"><div class="stat-bar-fill" style="width:${p.eficiencia || 0}%;background:linear-gradient(90deg,var(--accent),var(--accent-bright))"></div></div></div><div class="text-right"><div class="font-mono font-bold text-sm">${(p.eficiencia || 0).toFixed(1)}%</div><div class="text-[10px] text-[var(--fg-dim)]">eficiência</div></div></div>`
   ).join('') : '<div class="text-center text-[var(--fg-dim)] py-8">Nenhum dispositivo</div>';
   lucide.createIcons();
 }
@@ -1897,7 +1886,7 @@ window.openModal = function(id = null) {
     document.getElementById('fEficiencia').value = 95;
     document.getElementById('fEficienciaLabel').textContent = '95.0%';
     const t = new Date().toISOString().split('T')[0];
-    const nx = new Date(); nx.setDate(nx.getDate() + 30);
+    const nx = new Date(); nx.setDate(nx.getDate() + 365);
     document.getElementById('fUltima').value = t;
     document.getElementById('fProxima').value = nx.toISOString().split('T')[0];
   }
@@ -1912,6 +1901,19 @@ window.closeModal = function() {
 
 document.getElementById('fEficiencia').addEventListener('input', e => {
   document.getElementById('fEficienciaLabel').textContent = parseFloat(e.target.value).toFixed(1) + '%';
+});
+
+// Próxima Verificação = Última Verificação + 365 dias (automático)
+document.getElementById('fUltima').addEventListener('change', e => {
+  const fProxima = document.getElementById('fProxima');
+  if (!e.target.value) return;
+  const [y, m, d] = e.target.value.split('-').map(Number);
+  const nx = new Date(y, m - 1, d);
+  nx.setDate(nx.getDate() + 365);
+  const yyyy = nx.getFullYear();
+  const mm = String(nx.getMonth() + 1).padStart(2, '0');
+  const dd = String(nx.getDate()).padStart(2, '0');
+  fProxima.value = `${yyyy}-${mm}-${dd}`;
 });
 
 document.getElementById('pokaYokeForm').addEventListener('submit', async (e) => {
@@ -2030,8 +2032,8 @@ window.openDetail = function(id) {
             </div>
           </div>
           <div class="flex-1">
-            <div class="text-3xl font-display font-bold mb-1">${(p.defeitosEvitados || 0).toLocaleString('pt-BR')}</div>
-            <div class="text-sm text-[var(--fg-muted)]">Defeitos evitados</div>
+            <div class="text-xl font-display font-bold mb-1 truncate">${escapeHtml(p.responsavel || '—')}</div>
+            <div class="text-sm text-[var(--fg-muted)]">Responsável</div>
           </div>
         </div>
         <div class="divider-text">QR Code</div>
@@ -2192,8 +2194,8 @@ window.sortBy = function(field) {
 };
 
 window.exportPokaYokesCSV = function() {
-  const h = ['ID', 'Nome', 'Linha', 'Estacao', 'Tipo', 'Status', 'Responsavel', 'Eficiencia', 'Defeitos', 'Ultima', 'Proxima'];
-  const r = pokaYokes.map(p => [p.id, p.nome, getLinhaNome(p.linha), p.estacao, p.tipo, p.status, p.responsavel, p.eficiencia, p.defeitosEvitados || 0, p.ultimaVerificacao || '', p.proximaVerificacao || '']);
+  const h = ['ID', 'Nome', 'Linha', 'Estacao', 'Tipo', 'Status', 'Responsavel', 'Eficiencia', 'Ultima', 'Proxima'];
+  const r = pokaYokes.map(p => [p.id, p.nome, getLinhaNome(p.linha), p.estacao, p.tipo, p.status, p.responsavel, p.eficiencia, p.ultimaVerificacao || '', p.proximaVerificacao || '']);
   const c = [h, ...r].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const b = new Blob(['\ufeff' + c], { type: 'text/csv;charset=utf-8' });
   const u = URL.createObjectURL(b);
