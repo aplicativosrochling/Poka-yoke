@@ -678,6 +678,9 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Part Name</label><input type="text" id="fPartName" class="input" placeholder="Ex: Front Door Panel"></div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2"><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">N° Instrução de Trabalho</label><input type="text" id="fInstrucaoTrabalho" class="input font-mono" placeholder="Ex: IT-0123"></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Linha *</label><select id="fLinha" class="input" required><option value="">Selecione...</option></select></div>
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Estação *</label><input type="text" id="fEstacao" class="input font-mono" required placeholder="Ex: EST-A04"></div>
       </div>
@@ -691,6 +694,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Próxima Verif.</label><input type="date" id="fProxima" class="input"></div>
       </div>
       <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Descrição</label><textarea id="fDescricao" class="input" rows="3" placeholder="Descreva a função..."></textarea></div>
+      <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Matriz de Decisão</label><textarea id="fMatrizDecisao" class="input" rows="6" placeholder="Descreva o teste / matriz de decisão..."></textarea></div>
       <div class="flex items-center gap-3 pt-3 border-t border-[var(--border)]">
         <button type="button" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.closeModal()">Cancelar</button>
         <button type="submit" class="btn-accent px-4 py-2.5 rounded-lg text-sm flex-1 flex items-center justify-center gap-2"><i data-lucide="check" style="width:16px;height:16px"></i><span id="submitLabel">Criar</span></button>
@@ -1867,6 +1871,8 @@ window.openModal = function(id = null) {
     document.getElementById('fNome').value = p.nome;
     document.getElementById('fPartNumber').value = p.partNumber || '';
     document.getElementById('fPartName').value = p.partName || '';
+    document.getElementById('fInstrucaoTrabalho').value = p.instrucaoTrabalho || '';
+    document.getElementById('fMatrizDecisao').value = p.matrizDecisao || '';
     document.getElementById('fLinha').value = p.linha;
     document.getElementById('fEstacao').value = p.estacao;
     document.getElementById('fTipo').value = p.tipo;
@@ -1922,6 +1928,8 @@ document.getElementById('pokaYokeForm').addEventListener('submit', async (e) => 
     nome: document.getElementById('fNome').value.trim(),
     partNumber: document.getElementById('fPartNumber').value.trim(),
     partName: document.getElementById('fPartName').value.trim(),
+    instrucaoTrabalho: document.getElementById('fInstrucaoTrabalho').value.trim(),
+    matrizDecisao: document.getElementById('fMatrizDecisao').value.trim(),
     linha: document.getElementById('fLinha').value,
     estacao: document.getElementById('fEstacao').value.trim().toUpperCase(),
     tipo: document.getElementById('fTipo').value,
@@ -2049,6 +2057,7 @@ window.openDetail = function(id) {
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="map-pin" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Estação</div><div class="text-sm font-mono font-semibold">${p.estacao}</div></div></div>
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="package" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Number</div><div class="text-sm font-mono font-semibold">${p.partNumber || '—'}</div></div></div>
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="box" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Name</div><div class="text-sm font-semibold">${p.partName || '—'}</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="file-text" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">N° Instrução de Trabalho</div><div class="text-sm font-mono font-semibold">${escapeHtml(p.instrucaoTrabalho || '—')}</div></div></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="user" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Responsável</div><div class="text-sm font-semibold">${escapeHtml(p.responsavel)}</div></div></div>
@@ -2058,6 +2067,7 @@ window.openDetail = function(id) {
            <div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima Verif.</div><div class="text-sm font-mono ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg)]'}">${fmtDate(p.proximaVerificacao)}</div><div class="text-[10px] ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg-dim)]'} mt-0.5">${d < 0 ? `Vencido há ${Math.abs(d)}d` : `Em ${d}d`}</div></div>
         </div>
         ${p.descricao ? `<div class="bg-[var(--bg-3)] rounded-lg p-4 text-sm text-[var(--fg-muted)] leading-relaxed">${escapeHtml(p.descricao)}</div>` : ''}
+        ${p.matrizDecisao ? `<div><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-2">Matriz de Decisão</div><div class="bg-[var(--bg-3)] rounded-lg p-4 text-sm text-[var(--fg-muted)] leading-relaxed" style="white-space:pre-wrap">${escapeHtml(p.matrizDecisao)}</div></div>` : ''}
         <div class="divider-text">Histórico</div>
         <div class="space-y-0 max-h-48 overflow-y-auto scrollbar pr-2">
           ${p.historico?.map(h => `<div class="timeline-item"><div class="timeline-dot"></div><div class="text-sm font-semibold">${escapeHtml(h.evento)}</div><div class="text-[11px] text-[var(--fg-dim)] mt-0.5 font-mono">${fmtDate(h.data)} • ${escapeHtml(h.usuario)}</div></div>`).join('') || '<div class="text-sm text-[var(--fg-dim)]">Sem histórico.</div>'}
