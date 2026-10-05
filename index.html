@@ -461,7 +461,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="target" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Eficiência Média</div><div class="font-display font-bold text-3xl" id="kpiEficiencia">0%</div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Eficiência Média por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Últimos 6 meses</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas"></canvas></div></div>
+        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Eficiência Média por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Valor atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas"></canvas></div></div>
         <div class="card p-5 cursor-pointer" onclick="window.switchView('pokayokes')" title="Ver poka-yokes por tipo"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Distribuição por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Categorização atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:220px"><canvas id="chartTipos"></canvas></div><div class="mt-4 space-y-2" id="chartTiposLegend"></div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1210,7 +1210,7 @@ async function createPokaYoke(data) {
     const docData = {
       ...data,
       id: newId,
-      historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo criado', usuario: 'Operador' }],
+      historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo criado', usuario: 'Operador', eficiencia: data.eficiencia }],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -1222,7 +1222,7 @@ async function createPokaYoke(data) {
     const lastId = getLastPokaYokeIdLocal();
     const nextNumber = parseInt(lastId?.split('-')[1] || '0') + 1;
     const newId = `PY-${String(nextNumber).padStart(3, '0')}`;
-    pokaYokes.push({ ...data, id: newId, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador' }] });
+    pokaYokes.push({ ...data, id: newId, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador', eficiencia: data.eficiencia }] });
     renderAll();
     return newId;
   }
@@ -1249,7 +1249,7 @@ async function updatePokaYoke(id, data) {
     if (!docSnap.exists) throw new Error('Não encontrado');
     const currentData = docSnap.data();
     const historico = currentData.historico || [];
-    historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo editado', usuario: 'Operador' });
+    historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo editado', usuario: 'Operador', eficiencia: data.eficiencia });
     await updateDoc(docRef, { ...data, historico, updatedAt: serverTimestamp() });
   } catch (error) {
     console.error('❌ Erro ao atualizar:', error);
@@ -1257,7 +1257,7 @@ async function updatePokaYoke(id, data) {
     if (idx !== -1) {
       const current = pokaYokes[idx];
       const historico = current.historico || [];
-      historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Editado (offline)', usuario: 'Operador' });
+      historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Editado (offline)', usuario: 'Operador', eficiencia: data.eficiencia });
       pokaYokes[idx] = { ...current, ...data, historico };
       renderAll();
     }
@@ -1673,6 +1673,7 @@ function renderAll() {
   renderPokaYokes();
   renderLinhas();
   renderRelatorios();
+  renderCharts();
   renderManutencao();
   renderCalibracao();
   renderAuditoria();
@@ -1726,6 +1727,95 @@ function renderDashboard() {
   ).join('') : '<div class="text-center text-sm text-[var(--fg-dim)] py-8">Nenhuma calibração próxima</div>';
   
   lucide.createIcons();
+}
+
+
+// ============================================================
+// GRÁFICOS (Chart.js)
+// ============================================================
+const _charts = {};
+function _mkChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el || typeof Chart === 'undefined') return;
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+  _charts[id] = new Chart(el.getContext('2d'), cfg);
+}
+function _avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+
+function _trendData() {
+  const now = new Date();
+  const labels = [], ends = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const iso = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+    labels.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''));
+    ends.push(i === 0 ? '9999-12-31' : iso);
+  }
+  const values = ends.map((end, idx) => {
+    const vals = [];
+    pokaYokes.forEach(p => {
+      const pts = (p.historico || []).filter(h => h.data && typeof h.eficiencia === 'number').sort((a, b) => a.data.localeCompare(b.data));
+      const dates = (p.historico || []).map(h => h.data).filter(Boolean).sort();
+      const first = dates[0] || '0000-01-01';
+      if (first > end) return;                       // ainda não existia
+      if (idx === ends.length - 1) { vals.push(p.eficiencia || 0); return; } // mês atual = valor atual
+      let v = null;
+      pts.forEach(h => { if (h.data <= end) v = h.eficiencia; });
+      vals.push(v !== null ? v : (p.eficiencia || 0));
+    });
+    return vals.length ? +_avg(vals).toFixed(2) : null;
+  });
+  return { labels, values };
+}
+
+function renderCharts() {
+  if (typeof Chart === 'undefined') return;
+  const c = getChartColors();
+  Chart.defaults.color = c.text;
+  Chart.defaults.font.family = "'Manrope', sans-serif";
+  const axis = (extra = {}) => ({ grid: { color: c.grid }, ticks: { color: c.text }, ...extra });
+
+  if (currentView === 'dashboard') {
+    // Distribuição por tipo
+    const tipos = Object.keys(TIPOS_COLORS);
+    const counts = tipos.map(t => pokaYokes.filter(p => p.tipo === t).length);
+    _mkChart('chartTipos', {
+      type: 'doughnut',
+      data: { labels: tipos, datasets: [{ data: counts, backgroundColor: tipos.map(t => TIPOS_COLORS[t]), borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } }
+    });
+    const lg = document.getElementById('chartTiposLegend');
+    if (lg) lg.innerHTML = tipos.map((t, i) => `<div class="flex items-center justify-between text-sm"><div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:3px;background:${TIPOS_COLORS[t]};display:inline-block"></span><span>${t}</span></div><span class="font-mono font-bold">${counts[i]}</span></div>`).join('');
+
+    // Eficiência média por linha
+    const lin = linhas.length ? linhas : [...new Set(pokaYokes.map(p => p.linha))].map(l => ({ codigo: l, cor: '#ff6b1a' }));
+    const efs = lin.map(l => +_avg(pokaYokes.filter(p => p.linha === l.codigo && p.status !== 'Inativo').map(p => p.eficiencia || 0)).toFixed(1));
+    _mkChart('chartLinhas', {
+      type: 'bar',
+      data: { labels: lin.map(l => l.codigo), datasets: [{ label: 'Eficiência (%)', data: efs, backgroundColor: lin.map(l => l.cor || '#ff6b1a'), borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+    });
+  }
+
+  if (currentView === 'relatorios') {
+    // Tendência de eficiência (12 meses)
+    const tr = _trendData();
+    _mkChart('chartTrend', {
+      type: 'line',
+      data: { labels: tr.labels, datasets: [{ label: 'Eficiência média (%)', data: tr.values, borderColor: '#ff6b1a', backgroundColor: 'rgba(255,107,26,0.12)', fill: true, tension: 0.35, pointRadius: 3, spanGaps: true }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+    });
+
+    // Eficiência por tipo
+    const tipos = Object.keys(TIPOS_COLORS);
+    const efT = tipos.map(t => +_avg(pokaYokes.filter(p => p.tipo === t).map(p => p.eficiencia || 0)).toFixed(1));
+    _mkChart('chartTipoEf', {
+      type: 'bar',
+      data: { labels: tipos, datasets: [{ label: 'Eficiência (%)', data: efT, backgroundColor: tipos.map(t => TIPOS_COLORS[t]), borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+    });
+  }
 }
 
 // Poka-Yokes
