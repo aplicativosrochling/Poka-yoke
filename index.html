@@ -726,6 +726,31 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   </div>
 </div>
 
+<div id="calModalOverlay" class="modal-backdrop hidden">
+  <div class="modal scrollbar" style="max-width: 520px;">
+    <div class="p-6 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg-2)] z-10">
+      <div><h2 class="font-display font-bold text-xl">Registrar Calibração</h2><p class="text-xs text-[var(--fg-muted)] mt-0.5" id="calModalSubtitle">Poka-yoke</p></div>
+      <button class="icon-btn" onclick="window.closeCalModal()"><i data-lucide="x"></i></button>
+    </div>
+    <form id="calForm" class="p-6 space-y-4">
+      <input type="hidden" id="calPkId">
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Data da Calibração *</label><input type="date" id="calData" class="input" required></div>
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Próxima Calibração *</label><input type="date" id="calProxima" class="input" required></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Resultado</label><select id="calResultado" class="input"><option>Aprovado</option><option>Reprovado</option></select></div>
+        <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">N° Certificado</label><input type="text" id="calCertificado" class="input font-mono" placeholder="Ex: CERT-2026-001"></div>
+      </div>
+      <div><label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Observações</label><textarea id="calObs" class="input" rows="3" placeholder="Detalhes do teste / ajustes realizados..."></textarea></div>
+      <div class="flex items-center gap-3 pt-3 border-t border-[var(--border)]">
+        <button type="button" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.closeCalModal()">Cancelar</button>
+        <button type="submit" class="btn-accent px-4 py-2.5 rounded-lg text-sm flex-1 flex items-center justify-center gap-2"><i data-lucide="check" style="width:16px;height:16px"></i><span>Registrar</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="deleteOverlay" class="modal-backdrop hidden">
   <div class="modal" style="max-width:420px">
     <div class="p-6 text-center">
@@ -1210,7 +1235,7 @@ async function createPokaYoke(data) {
     const docData = {
       ...data,
       id: newId,
-      historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo criado', usuario: 'Operador', eficiencia: data.eficiencia }],
+      historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo criado', usuario: 'Operador', ...(typeof data.eficiencia === 'number' ? { eficiencia: data.eficiencia } : {}) }],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -1222,7 +1247,7 @@ async function createPokaYoke(data) {
     const lastId = getLastPokaYokeIdLocal();
     const nextNumber = parseInt(lastId?.split('-')[1] || '0') + 1;
     const newId = `PY-${String(nextNumber).padStart(3, '0')}`;
-    pokaYokes.push({ ...data, id: newId, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador', eficiencia: data.eficiencia }] });
+    pokaYokes.push({ ...data, id: newId, historico: [{ data: new Date().toISOString().split('T')[0], evento: 'Criado (offline)', usuario: 'Operador', ...(typeof data.eficiencia === 'number' ? { eficiencia: data.eficiencia } : {}) }] });
     renderAll();
     return newId;
   }
@@ -1242,14 +1267,14 @@ function getLastPokaYokeIdLocal() {
   return ids.length > 0 ? `PY-${String(Math.max(...ids)).padStart(3, '0')}` : null;
 }
 
-async function updatePokaYoke(id, data) {
+async function updatePokaYoke(id, data, evento) {
   try {
     const docRef = doc(db, 'pokaYokes', id);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists) throw new Error('Não encontrado');
     const currentData = docSnap.data();
     const historico = currentData.historico || [];
-    historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Dispositivo editado', usuario: 'Operador', eficiencia: data.eficiencia });
+    historico.push({ data: new Date().toISOString().split('T')[0], evento: evento || 'Dispositivo editado', usuario: 'Operador', ...(typeof data.eficiencia === 'number' ? { eficiencia: data.eficiencia } : {}) });
     await updateDoc(docRef, { ...data, historico, updatedAt: serverTimestamp() });
   } catch (error) {
     console.error('❌ Erro ao atualizar:', error);
@@ -1257,7 +1282,7 @@ async function updatePokaYoke(id, data) {
     if (idx !== -1) {
       const current = pokaYokes[idx];
       const historico = current.historico || [];
-      historico.push({ data: new Date().toISOString().split('T')[0], evento: 'Editado (offline)', usuario: 'Operador', eficiencia: data.eficiencia });
+      historico.push({ data: new Date().toISOString().split('T')[0], evento: evento || 'Editado (offline)', usuario: 'Operador', ...(typeof data.eficiencia === 'number' ? { eficiencia: data.eficiencia } : {}) });
       pokaYokes[idx] = { ...current, ...data, historico };
       renderAll();
     }
@@ -1798,6 +1823,42 @@ function renderCharts() {
     });
   }
 
+
+  if (currentView === 'calibracao') {
+    const sts = ['Em Dia', 'Próxima', 'Vencida', 'Sem data'];
+    const cols = ['#22c55e', '#f59e0b', '#ef4444', '#64748b'];
+    const cnt = sts.map(k => pokaYokes.filter(p => _calStatus(p).key === k).length);
+    _mkChart('chartCalStatus', {
+      type: 'doughnut',
+      data: { labels: sts, datasets: [{ data: cnt, backgroundColor: cols, borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10 } } } }
+    });
+    // Planejado (próximas datas) vs Realizado (calibrações feitas) - 3 meses atrás até 5 à frente
+    const now = new Date();
+    const keys = [], labels = [];
+    for (let i = -3; i <= 5; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      labels.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''));
+    }
+    const plan = keys.map(() => 0), done = keys.map(() => 0);
+    pokaYokes.forEach(p => {
+      if (p.proximaVerificacao) { const k = keys.indexOf(p.proximaVerificacao.slice(0, 7)); if (k >= 0) plan[k]++; }
+      const real = new Set();
+      if (p.ultimaVerificacao) real.add(p.ultimaVerificacao);
+      (p.historico || []).forEach(h => { if (h.data && (h.evento || '').startsWith('Calibração realizada')) real.add(h.data); });
+      real.forEach(dt => { const k = keys.indexOf(dt.slice(0, 7)); if (k >= 0) done[k]++; });
+    });
+    _mkChart('chartCalMeses', {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: 'Planejado', data: plan, backgroundColor: '#06b6d4', borderRadius: 4 },
+        { label: 'Realizado', data: done, backgroundColor: '#22c55e', borderRadius: 4 }
+      ] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.text, boxWidth: 10 } } }, scales: { x: axis(), y: axis({ beginAtZero: true, ticks: { color: c.text, precision: 0 } }) } }
+    });
+  }
+
   if (currentView === 'relatorios') {
     // Tendência de eficiência (12 meses)
     const tr = _trendData();
@@ -1924,695 +1985,71 @@ function renderManutencao() {
   lucide.createIcons();
 }
 
-// Calibração (simplificado)
-function renderCalibracao() {
-  document.getElementById('calibracaoGrid').innerHTML = calibracoes.length ? calibracoes.map(c => {
-    const pk = pokaYokes.find(p => p.id === c.pokaYokeId);
-    return `<div class="card card-glow p-5 cursor-pointer" onclick="window.openCalibracaoDetail('${c.id}')"><div class="flex items-start justify-between mb-3"><div><span class="font-mono text-xs font-bold text-[var(--accent-bright)]">${c.id || '—'}</span><div class="text-[11px] text-[var(--fg-dim)] font-mono mt-0.5">${c.certificado || '—'}</div></div><span class="badge" style="background:rgba(34,197,94,0.12);color:#4ade80;border:1px solid rgba(34,197,94,0.25)">${c.status || '—'}</span></div><h3 class="font-display font-bold text-sm mb-1 leading-tight">${escapeHtml(pk?.nome || c.pokaYokeId || '—')}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 font-mono">${c.pokaYokeId || '—'} • ${pk?.estacao || '—'}</div><div class="grid grid-cols-2 gap-3 mb-3"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Última</div><div class="text-xs font-mono font-semibold">${fmtDate(c.ultima)}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima</div><div class="text-xs font-mono font-semibold">${fmtDate(c.proxima)}</div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="text-xs font-bold" style="color:${c.resultado === 'Aprovado' ? '#22c55e' : '#ef4444'}">${c.resultado || '—'}</span><span class="text-[10px] font-mono text-[var(--fg-dim)]">${c.incerteza || '—'}</span></div></div>`;
-  }).join('') : '<div class="col-span-full card p-12 text-center text-[var(--fg-dim)]">Nenhuma calibração</div>';
-  lucide.createIcons();
-}
-
-// Auditoria (simplificado)
-function renderAuditoria() {
-  document.getElementById('audTotal').textContent = auditoriaLogs.length;
-  document.getElementById('audUsuarios').textContent = new Set(auditoriaLogs.map(l => l.usuario)).size;
-  document.getElementById('audExclusoes').textContent = auditoriaLogs.filter(l => l.acao === 'Exclusão').length;
-  document.getElementById('audEdicoes').textContent = auditoriaLogs.filter(l => l.acao === 'Edição').length;
-  document.getElementById('audTableBody').innerHTML = auditoriaLogs.length ? auditoriaLogs.map(l => 
-    `<tr class="table-row border-b border-[var(--border)]"><td class="px-4 py-3 font-mono text-xs text-[var(--fg-muted)]">${l.timestamp || '—'}</td><td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center font-bold text-[#0a0d12] text-[10px]">${(l.usuario || 'U').split(' ').map(n => n[0]).join('').slice(0, 2)}</div><span class="text-[13px] font-semibold">${l.usuario || '—'}</span></div></td><td class="px-4 py-3"><span class="badge" style="background:rgba(138,152,172,0.2);color:#8a98ac;border:1px solid rgba(138,152,172,0.4)">${l.acao || '—'}</span></td><td class="px-4 py-3 text-[var(--fg-muted)]">${l.entidade || '—'}</td><td class="px-4 py-3 max-w-xs truncate">${escapeHtml(l.detalhe || '—')}</td></tr>`
-  ).join('') : '<tr><td colspan="5" class="px-4 py-12 text-center text-[var(--fg-dim)]">Nenhum evento</td></tr>';
-  lucide.createIcons();
-}
-
-// ============================================================
-// FUNÇÕES AUXILIARES (Modal, Delete, etc)
-// ============================================================
-window.openModal = function(id = null) {
-  editingId = id;
-  const selectLinha = document.getElementById('fLinha');
-  selectLinha.innerHTML = '<option value="">Selecione...</option>' + linhas.map(l => `<option value="${l.codigo}">${l.codigo} - ${l.nome}</option>`).join('');
-  if (id) {
-    const p = pokaYokes.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('modalTitle').textContent = 'Editar Poka-Yoke';
-    document.getElementById('submitLabel').textContent = 'Salvar';
-    document.getElementById('fId').value = p.id;
-    document.getElementById('fNome').value = p.nome;
-    document.getElementById('fPartNumber').value = p.partNumber || '';
-    document.getElementById('fPartName').value = p.partName || '';
-    document.getElementById('fInstrucaoTrabalho').value = p.instrucaoTrabalho || '';
-    document.getElementById('fMatrizDecisao').value = p.matrizDecisao || '';
-    document.getElementById('fLinha').value = p.linha;
-    document.getElementById('fEstacao').value = p.estacao;
-    document.getElementById('fTipo').value = p.tipo;
-    document.getElementById('fStatus').value = p.status;
-    document.getElementById('fResponsavel').value = p.responsavel;
-    document.getElementById('fEficiencia').value = p.eficiencia;
-    document.getElementById('fEficienciaLabel').textContent = p.eficiencia.toFixed(1) + '%';
-    document.getElementById('fUltima').value = p.ultimaVerificacao || '';
-    document.getElementById('fProxima').value = p.proximaVerificacao || '';
-    document.getElementById('fDescricao').value = p.descricao || '';
-  } else {
-    document.getElementById('modalTitle').textContent = 'Novo Poka-Yoke';
-    document.getElementById('submitLabel').textContent = 'Criar';
-    document.getElementById('pokaYokeForm').reset();
-    const n = `PY-${String(Math.max(...pokaYokes.map(p => parseInt(p.id.split('-')[1])) || [0]) + 1).padStart(3, '0')}`;
-    document.getElementById('fId').value = n;
-    document.getElementById('fEficiencia').value = 95;
-    document.getElementById('fEficienciaLabel').textContent = '95.0%';
-    const t = new Date().toISOString().split('T')[0];
-    const nx = new Date(); nx.setDate(nx.getDate() + 365);
-    document.getElementById('fUltima').value = t;
-    document.getElementById('fProxima').value = nx.toISOString().split('T')[0];
-  }
-  document.getElementById('modalOverlay').classList.remove('hidden');
-  lucide.createIcons();
-};
-
-window.closeModal = function() {
-  document.getElementById('modalOverlay').classList.add('hidden');
-  editingId = null;
-};
-
-document.getElementById('fEficiencia').addEventListener('input', e => {
-  document.getElementById('fEficienciaLabel').textContent = parseFloat(e.target.value).toFixed(1) + '%';
-});
-
-// Próxima Verificação = Última Verificação + 365 dias (automático)
-document.getElementById('fUltima').addEventListener('change', e => {
-  const fProxima = document.getElementById('fProxima');
-  if (!e.target.value) return;
-  const [y, m, d] = e.target.value.split('-').map(Number);
-  const nx = new Date(y, m - 1, d);
-  nx.setDate(nx.getDate() + 365);
-  const yyyy = nx.getFullYear();
-  const mm = String(nx.getMonth() + 1).padStart(2, '0');
-  const dd = String(nx.getDate()).padStart(2, '0');
-  fProxima.value = `${yyyy}-${mm}-${dd}`;
-});
-
-document.getElementById('pokaYokeForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const data = {
-    nome: document.getElementById('fNome').value.trim(),
-    partNumber: document.getElementById('fPartNumber').value.trim(),
-    partName: document.getElementById('fPartName').value.trim(),
-    instrucaoTrabalho: document.getElementById('fInstrucaoTrabalho').value.trim(),
-    matrizDecisao: document.getElementById('fMatrizDecisao').value.trim(),
-    linha: document.getElementById('fLinha').value,
-    estacao: document.getElementById('fEstacao').value.trim().toUpperCase(),
-    tipo: document.getElementById('fTipo').value,
-    status: document.getElementById('fStatus').value,
-    responsavel: document.getElementById('fResponsavel').value.trim(),
-    eficiencia: parseFloat(document.getElementById('fEficiencia').value),
-    ultimaVerificacao: document.getElementById('fUltima').value,
-    proximaVerificacao: document.getElementById('fProxima').value,
-    descricao: document.getElementById('fDescricao').value.trim()
-  };
-  try {
-    if (editingId) {
-      await updatePokaYoke(editingId, data);
-      showToast(`${editingId} atualizado`, 'success');
-    } else {
-      const newId = await createPokaYoke(data);
-      showToast(`${newId} criado`, 'success');
-    }
-    closeModal();
-  } catch (error) {
-    showToast('Erro ao salvar', 'error');
-  }
-});
-
-window.openDeleteModal = function(id) {
-  deletingId = id;
-  const p = pokaYokes.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('deleteName').textContent = `${p.id} • ${p.nome}`;
-  document.getElementById('deleteOverlay').classList.remove('hidden');
-  lucide.createIcons();
-};
-
-window.closeDeleteModal = function() {
-  document.getElementById('deleteOverlay').classList.add('hidden');
-  deletingId = null;
-};
-
-window.confirmDelete = async function() {
-  const id = deletingId;
-  if (!id) return;
-  await deletePokaYoke(id);
-  showToast(`${id} excluído`, 'info');
-  window.closeDeleteModal();
-};
-
-window.openDeleteLinhaModal = function(id) {
-  deletingLinhaId = id;
-  const l = linhas.find(x => x.firebaseId === id || x.codigo === id);
-  if (!l) return;
-  document.getElementById('deleteLinhaName').textContent = `${l.codigo} - ${l.nome}`;
-  const dispositivos = pokaYokes.filter(p => p.linha === l.codigo);
-  const warning = document.getElementById('deleteLinhaWarning');
-  if (dispositivos.length > 0) {
-    warning.textContent = `⚠️ ${dispositivos.length} dispositivo(s) associado(s)`;
-    warning.style.display = 'block';
-  } else { warning.style.display = 'none'; }
-  document.getElementById('deleteLinhaOverlay').classList.remove('hidden');
-  lucide.createIcons();
-};
-
-window.closeDeleteLinhaModal = function() {
-  document.getElementById('deleteLinhaOverlay').classList.add('hidden');
-  deletingLinhaId = null;
-};
-
-window.confirmDeleteLinha = async function() {
-  const id = deletingLinhaId;
-  if (!id) return;
-  await deleteLinha(id);
-  showToast('Linha excluída', 'info');
-  window.closeDeleteLinhaModal();
-};
-
-window.openDetail = function(id) {
-  const p = pokaYokes.find(x => x.id === id);
-  if (!p) return;
-  const s = STATUS_CONFIG[p.status];
-  const tc = TIPOS_COLORS[p.tipo] || '#8a98ac';
-  const c = p.eficiencia > 95 ? '#22c55e' : p.eficiencia > 85 ? '#f59e0b' : '#ef4444';
+// Calibração (derivada dos poka-yokes: última / próxima verificação)
+function _calStatus(p) {
+  if (!p.proximaVerificacao) return { key: 'Sem data', color: '#64748b', bg: 'rgba(100,116,139,0.12)', d: null };
   const d = daysUntil(p.proximaVerificacao);
-  const cir = 2 * Math.PI * 52;
-  const off = cir - (p.eficiencia / 100) * cir;
-  const linhaNome = getLinhaNome(p.linha);
-  const linhaCor = getLinhaCor(p.linha);
-  
-  document.getElementById('detailContent').innerHTML = `
-    <div class="p-6 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg-2)] z-10">
-      <div class="flex items-center gap-3">
-        <span class="badge ${s.cls}"><span class="pulse-dot" style="color:${s.color}"></span>${p.status}</span>
-        <span class="badge" style="background:${tc}20;color:${tc};border:1px solid ${tc}40">${p.tipo}</span>
-        <span class="badge badge-linha" style="border-color:${linhaCor}40"><span class="w-1.5 h-1.5 rounded-full" style="background:${linhaCor}"></span>${linhaNome}</span>
-      </div>
-      <button class="icon-btn" onclick="window.closeDetail()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-1 space-y-6">
-        <div><span class="font-mono text-xs font-bold text-[var(--accent-bright)]">${p.id}</span><h2 class="font-display font-bold text-2xl leading-tight mt-1 mb-4">${escapeHtml(p.nome)}</h2></div>
-        <div class="flex items-center gap-5">
-          <div class="relative w-32 h-32 flex-shrink-0">
-            <svg class="progress-ring" width="128" height="128">
-              <circle cx="64" cy="64" r="52" stroke="#1d2532" stroke-width="8" fill="none"/>
-              <circle cx="64" cy="64" r="52" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${cir}" stroke-dashoffset="${off}"/>
-            </svg>
-            <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <div class="font-display font-bold text-2xl" style="color:${c}">${p.eficiencia.toFixed(1)}%</div>
-              <div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</div>
-            </div>
-          </div>
-          <div class="flex-1">
-            <div class="text-xl font-display font-bold mb-1 truncate">${escapeHtml(p.responsavel || '—')}</div>
-            <div class="text-sm text-[var(--fg-muted)]">Responsável</div>
-          </div>
-        </div>
-        <div class="divider-text">QR Code</div>
-        <div class="flex items-center gap-4 bg-[var(--bg-3)] p-4 rounded-lg">
-          <div class="bg-white p-2 rounded-lg flex-shrink-0"><img id="detailQR-${p.id}" alt="QR Code" style="width: 100px; height: 100px;" /></div>
-          <div class="flex flex-col gap-2"><div class="text-xs text-[var(--fg-muted)]">Escaneie para acesso rápido.</div><button class="btn-ghost px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2" onclick="window.openQRModal('${p.id}')"><i data-lucide="printer" style="width:12px;height:12px"></i>Imprimir QR</button></div>
-        </div>
-      </div>
-      <div class="lg:col-span-2 space-y-5">
-        <div class="divider-text">Informações Técnicas</div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="factory" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Linha</div><div class="text-sm font-semibold">${linhaNome}</div></div></div>
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="map-pin" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Estação</div><div class="text-sm font-mono font-semibold">${p.estacao}</div></div></div>
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="package" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Number</div><div class="text-sm font-mono font-semibold">${p.partNumber || '—'}</div></div></div>
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="box" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Part Name</div><div class="text-sm font-semibold">${p.partName || '—'}</div></div></div>
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="file-text" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">N° Instrução de Trabalho</div><div class="text-sm font-mono font-semibold">${escapeHtml(p.instrucaoTrabalho || '—')}</div></div></div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="user" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Responsável</div><div class="text-sm font-semibold">${escapeHtml(p.responsavel)}</div></div></div>
-          <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-[var(--bg-3)] flex items-center justify-center"><i data-lucide="calendar" class="text-[var(--fg-muted)]" style="width:15px;height:15px"></i></div><div class="flex-1"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Última Verif.</div><div class="text-sm font-mono">${fmtDate(p.ultimaVerificacao)}</div></div></div>
-        </div>
-        <div class="grid grid-cols-1 gap-4">
-           <div class="bg-[var(--bg-3)] rounded-lg p-3"><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima Verif.</div><div class="text-sm font-mono ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg)]'}">${fmtDate(p.proximaVerificacao)}</div><div class="text-[10px] ${d < 0 ? 'text-[var(--red)]' : d < 7 ? 'text-[var(--amber)]' : 'text-[var(--fg-dim)]'} mt-0.5">${d < 0 ? `Vencido há ${Math.abs(d)}d` : `Em ${d}d`}</div></div>
-        </div>
-        ${p.descricao ? `<div class="bg-[var(--bg-3)] rounded-lg p-4 text-sm text-[var(--fg-muted)] leading-relaxed">${escapeHtml(p.descricao)}</div>` : ''}
-        ${p.matrizDecisao ? `<div><div class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-2">Matriz de Decisão</div><div class="bg-[var(--bg-3)] rounded-lg p-4 text-sm text-[var(--fg-muted)] leading-relaxed" style="white-space:pre-wrap">${escapeHtml(p.matrizDecisao)}</div></div>` : ''}
-        <div class="divider-text">Histórico</div>
-        <div class="space-y-0 max-h-48 overflow-y-auto scrollbar pr-2">
-          ${p.historico?.map(h => `<div class="timeline-item"><div class="timeline-dot"></div><div class="text-sm font-semibold">${escapeHtml(h.evento)}</div><div class="text-[11px] text-[var(--fg-dim)] mt-0.5 font-mono">${fmtDate(h.data)} • ${escapeHtml(h.usuario)}</div></div>`).join('') || '<div class="text-sm text-[var(--fg-dim)]">Sem histórico.</div>'}
-        </div>
-      </div>
-    </div>
-    <div class="flex gap-2 p-6 border-t border-[var(--border)] sticky bottom-0 bg-[var(--bg-2)]">
-      <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1 flex items-center justify-center gap-2" onclick="window.openQRModal('${p.id}')"><i data-lucide="qr-code" style="width:14px;height:14px"></i>QR</button>
-      <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1 flex items-center justify-center gap-2" onclick="window.closeDetail();window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i>Editar</button>
-      <button class="btn-danger px-4 py-2.5 rounded-lg text-sm flex-1 flex items-center justify-center gap-2" onclick="window.closeDetail();window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i>Excluir</button>
-    </div>`;
-  document.getElementById('detailOverlay').classList.remove('hidden');
-  setTimeout(function() {
-    var qrImg = document.getElementById('detailQR-' + p.id);
-    if (qrImg) setQRImage(qrImg, p, 100);
-  }, 50);
+  if (d < 0) return { key: 'Vencida', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', d };
+  if (d <= 30) return { key: 'Próxima', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', d };
+  return { key: 'Em Dia', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', d };
+}
+function _calList() {
+  const q = (document.getElementById('calSearch')?.value || '').toLowerCase().trim();
+  const f = document.getElementById('calFilterStatus')?.value || '';
+  return pokaYokes.map(p => ({ p, st: _calStatus(p) }))
+    .filter(x => !q || [x.p.id, x.p.nome, x.p.estacao, x.p.linha, x.p.responsavel, x.p.partNumber].some(v => (v || '').toLowerCase().includes(q)))
+    .filter(x => !f || x.st.key === f)
+    .sort((a, b) => (a.st.d === null) - (b.st.d === null) || (a.st.d || 0) - (b.st.d || 0));
+}
+function renderCalibracao() {
+  const grid = document.getElementById('calibracaoGrid');
+  if (!grid) return;
+  const list = _calList();
+  grid.innerHTML = list.length ? list.map(({ p, st }) => {
+    const dtxt = st.d === null ? 'Sem próxima data' : st.d < 0 ? `Vencida há ${-st.d} dia(s)` : st.d === 0 ? 'Vence hoje' : `Em ${st.d} dia(s)`;
+    return `<div class="card card-glow p-5 cursor-pointer" onclick="window.openDetail('${p.id}')"><div class="flex items-start justify-between mb-3"><div><span class="font-mono text-xs font-bold text-[var(--accent-bright)]">${p.id}</span><div class="text-[11px] text-[var(--fg-dim)] font-mono mt-0.5">${escapeHtml(p.certificado || '—')}</div></div><span class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.color}40">${st.key}</span></div><h3 class="font-display font-bold text-sm mb-1 leading-tight">${escapeHtml(p.nome || '')}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 font-mono">${escapeHtml(p.linha || '—')} • ${escapeHtml(p.estacao || '—')}</div><div class="grid grid-cols-2 gap-3 mb-3"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Última</div><div class="text-xs font-mono font-semibold">${fmtDate(p.ultimaVerificacao)}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima</div><div class="text-xs font-mono font-semibold">${fmtDate(p.proximaVerificacao)}</div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="text-xs font-bold" style="color:${st.color}">${dtxt}</span><button class="btn-accent px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" onclick="event.stopPropagation();window.openCalModal('${p.id}')"><i data-lucide="gauge" style="width:13px;height:13px"></i>Calibrar</button></div></div>`;
+  }).join('') : '<div class="col-span-full card p-12 text-center text-[var(--fg-dim)]">Nenhuma calibração encontrada</div>';
   lucide.createIcons();
-};
+}
 
-window.closeDetail = function() {
-  document.getElementById('detailOverlay').classList.add('hidden');
-};
-
-window.openQRModal = function(id) {
+window.openCalModal = function(id) {
   const p = pokaYokes.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('qrModalId').textContent = p.id;
-  document.getElementById('qrModalName').textContent = p.nome;
-  document.getElementById('qrModalImg').src = '';
-  document.getElementById('qrOverlay').classList.remove('hidden');
-  setTimeout(function() { window.changeQRSize(); }, 50);
+  const today = new Date();
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // intervalo = o que já existia entre última e próxima; senão 365 dias
+  let interval = 365;
+  if (p.ultimaVerificacao && p.proximaVerificacao) {
+    const diff = Math.round((new Date(p.proximaVerificacao) - new Date(p.ultimaVerificacao)) / 86400000);
+    if (diff > 0) interval = diff;
+  }
+  const nx = new Date(today); nx.setDate(nx.getDate() + interval);
+  document.getElementById('calPkId').value = id;
+  document.getElementById('calModalSubtitle').textContent = `${p.id} — ${p.nome}`;
+  document.getElementById('calData').value = iso(today);
+  document.getElementById('calProxima').value = iso(nx);
+  document.getElementById('calResultado').value = 'Aprovado';
+  document.getElementById('calCertificado').value = '';
+  document.getElementById('calObs').value = '';
+  document.getElementById('calModalOverlay').classList.remove('hidden');
   lucide.createIcons();
 };
-
-window.closeQRModal = function() {
-  document.getElementById('qrOverlay').classList.add('hidden');
-};
-
-window.changeQRSize = function() {
-  const size = document.getElementById('qrSizeSelect').value;
-  const p = pokaYokes.find(x => x.id === document.getElementById('qrModalId').textContent);
-  if (!p) return;
-  const img = document.getElementById('qrModalImg');
-  setQRImage(img, p, size);
-};
-
-window.printSingleQR = function() {
-  const size = document.getElementById('qrSizeSelect').value;
-  const p = pokaYokes.find(x => x.id === document.getElementById('qrModalId').textContent);
-  if (!p) return;
-  var printDiv = document.createElement('div');
-  printDiv.style.cssText = "text-align:center; padding: 40px 20px; font-family: 'Manrope', sans-serif;";
-  printDiv.innerHTML = '<div style="font-weight: 900; font-size: 14px; color: #ea580c; text-transform: uppercase;">Röchling Automotive</div><h2 style="font-family: Archivo, sans-serif; font-size: 20px; margin: 0 0 12px 0; color: #000;">' + escapeHtml(p.nome) + '</h2><p style="font-family: JetBrains Mono, monospace; font-size: 12px; margin: 0 0 24px 0; color: #333;">ID: ' + p.id + ' | Estação: ' + p.estacao + '</p><img id="printSingleQRImg" style="width: ' + size + 'px; height: ' + size + 'px;" /><p style="font-family: JetBrains Mono, monospace; font-size: 10px; margin-top: 16px; color: #666;">Escaneie para mais informações</p>';
-  document.getElementById('printArea').innerHTML = '';
-  document.getElementById('printArea').appendChild(printDiv);
-  setQRImage(document.getElementById('printSingleQRImg'), p, size);
-  setTimeout(function() { window.print(); }, 200);
-};
-
-window.printQRMass = function() {
-  const selected = Array.from(selectedForPrint);
-  if (selected.length === 0) { showToast('Selecione pelo menos um dispositivo.', 'info'); return; }
-  const items = selected.map(id => pokaYokes.find(p => p.id === id)).filter(Boolean);
-  if (items.length === 0) { showToast('Nenhum dispositivo válido.', 'error'); return; }
-  showToast('Preparando ' + items.length + ' QR Codes...', 'info');
-  var container = document.createElement('div');
-  container.style.cssText = "font-family: 'Manrope', sans-serif; padding: 20px;";
-  container.innerHTML = '<div style="text-align:center; margin-bottom: 24px;"><div style="font-weight: 900; font-size: 16px; color: #ea580c; text-transform: uppercase;">Röchling Automotive</div><h1 style="font-family: Archivo, sans-serif; font-size: 24px; margin: 4px 0;">QR Codes - Poka-Yokes</h1><p style="color: #666; font-size: 14px;">' + items.length + ' dispositivos • ' + new Date().toLocaleDateString('pt-BR') + '</p></div><div class="print-qr-grid" id="printMassGrid"></div><div style="text-align:center; margin-top: 32px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 16px;">Röchling Automotive Poka-Yoke Management System</div>';
-  document.getElementById('printArea').innerHTML = '';
-  document.getElementById('printArea').appendChild(container);
-  var grid = document.getElementById('printMassGrid');
-  var pending = items.length;
-  items.forEach(function(p) {
-    var itemDiv = document.createElement('div');
-    itemDiv.className = 'qr-item';
-    var imgId = 'qr-mass-' + p.id;
-    itemDiv.innerHTML = '<img id="' + imgId + '" alt="QR Code ' + p.id + '" style="width:150px;height:150px;" /><div class="qr-label">' + p.id + '</div><div class="qr-sub">' + escapeHtml(p.nome) + '</div>';
-    grid.appendChild(itemDiv);
-    setQRImage(document.getElementById(imgId), p, 150);
-  });
-  setTimeout(function() { window.print(); }, 300);
-};
-
-window.toggleSelectAll = function() {
-  const checked = document.getElementById('selectAll').checked;
-  const tableChecked = document.getElementById('selectAllTable')?.checked || false;
-  const isChecked = checked || tableChecked;
-  const visible = pokaYokes.filter(p => {
-    if (currentFilters.search && !p.id.toLowerCase().includes(currentFilters.search.toLowerCase()) && !p.nome.toLowerCase().includes(currentFilters.search.toLowerCase())) return false;
-    if (currentFilters.linha && p.linha !== currentFilters.linha) return false;
-    if (currentFilters.tipo && p.tipo !== currentFilters.tipo) return false;
-    if (currentFilters.status && p.status !== currentFilters.status) return false;
-    return true;
-  });
-  if (isChecked) { visible.forEach(p => selectedForPrint.add(p.id)); } else { visible.forEach(p => selectedForPrint.delete(p.id)); }
-  document.getElementById('printCount').textContent = selectedForPrint.size;
-  document.getElementById('printSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
-  document.getElementById('selectAll').checked = isChecked;
-  if (document.getElementById('selectAllTable')) { document.getElementById('selectAllTable').checked = isChecked; }
-  renderPokaYokes();
-};
-
-window.togglePrintSelect = function(id, checked) {
-  if (checked) selectedForPrint.add(id); else selectedForPrint.delete(id);
-  document.getElementById('printCount').textContent = selectedForPrint.size;
-  document.getElementById('printSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
-  renderPokaYokes();
-};
-
-window.applyFilters = function() {
-  currentFilters.search = document.getElementById('pkSearch').value;
-  currentFilters.linha = document.getElementById('pkFilterLinha').value;
-  currentFilters.tipo = document.getElementById('pkFilterTipo').value;
-  currentFilters.status = document.getElementById('pkFilterStatus').value;
-  currentFilters.vencimento = document.getElementById('pkFilterVencimento').value;
-  renderPokaYokes();
-  showToast('Filtros aplicados', 'success');
-};
-
-window.clearFilters = function() {
-  document.getElementById('pkSearch').value = '';
-  document.getElementById('pkFilterLinha').value = '';
-  document.getElementById('pkFilterTipo').value = '';
-  document.getElementById('pkFilterStatus').value = '';
-  document.getElementById('pkFilterVencimento').value = '';
-  currentFilters = { search: '', linha: '', tipo: '', status: '', vencimento: '' };
-  renderPokaYokes();
-  showToast('Filtros limpos', 'info');
-};
-
-window.sortBy = function(field) {
-  if (sortField === field) { sortAsc = !sortAsc; } else { sortField = field; sortAsc = true; }
-  renderPokaYokes();
-};
-
-window.exportPokaYokesCSV = function() {
-  const h = ['ID', 'Nome', 'Linha', 'Estacao', 'Tipo', 'Status', 'Responsavel', 'Eficiencia', 'Ultima', 'Proxima'];
-  const r = pokaYokes.map(p => [p.id, p.nome, getLinhaNome(p.linha), p.estacao, p.tipo, p.status, p.responsavel, p.eficiencia, p.ultimaVerificacao || '', p.proximaVerificacao || '']);
-  const c = [h, ...r].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-  const b = new Blob(['\ufeff' + c], { type: 'text/csv;charset=utf-8' });
-  const u = URL.createObjectURL(b);
-  const a = document.createElement('a'); a.href = u; a.download = `pokayokes_${new Date().toISOString().split('T')[0]}.csv`; a.click();
-  URL.revokeObjectURL(u);
-  showToast('Exportado com sucesso', 'success');
-};
-
-window.exportAuditCSV = function() {
-  const h = ['Timestamp', 'Usuario', 'Acao', 'Entidade', 'Detalhe'];
-  const r = auditoriaLogs.map(l => [l.timestamp || '', l.usuario || '', l.acao || '', l.entidade || '', l.detalhe || '']);
-  const c = [h, ...r].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-  const b = new Blob(['\ufeff' + c], { type: 'text/csv;charset=utf-8' });
-  const u = URL.createObjectURL(b);
-  const a = document.createElement('a'); a.href = u; a.download = `auditoria_${new Date().toISOString().split('T')[0]}.csv`; a.click();
-  URL.revokeObjectURL(u);
-  showToast('Auditoria exportada', 'success');
-};
-
-window.toggleNotifications = function() {
-  const e = document.getElementById('notifPanel');
-  if (e) { e.remove(); return; }
-  const n = [{ tipo: 'danger', titulo: 'Calibração vencida', msg: 'PY-003 está com calibração vencida', tempo: '2h atrás', icon: 'alert-triangle' }, { tipo: 'warning', titulo: 'Manutenção em andamento', msg: 'PY-010 em calibração', tempo: '5h atrás', icon: 'wrench' }, { tipo: 'info', titulo: 'Nova OS criada', msg: 'OS-2024-0142 aberta', tempo: '1d atrás', icon: 'clipboard-list' }];
-  const p = document.createElement('div');
-  p.id = 'notifPanel';
-  p.className = 'modal-backdrop';
-  p.style.cssText = 'justify-content:flex-end;align-items:flex-start;padding:70px 20px 20px 0;background:rgba(5,7,10,0.3)';
-  p.innerHTML = `<div class="glass border border-[var(--border-bright)] rounded-2xl w-full max-w-sm overflow-hidden" style="animation:slideUp 0.25s ease" onclick="event.stopPropagation()"><div class="p-4 border-b border-[var(--border)] flex items-center justify-between"><div><h3 class="font-display font-bold text-base">Notificações</h3><p class="text-[11px] text-[var(--fg-dim)]">${n.length} não lidas</p></div></div><div class="max-h-[400px] overflow-y-auto scrollbar">${n.map(x => `<div class="p-4 border-b border-[var(--border)] hover:bg-[rgba(255,255,255,0.02)] cursor-pointer transition"><div class="flex gap-3"><div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:${x.tipo === 'danger' ? 'rgba(239,68,68,0.12)' : x.tipo === 'warning' ? 'rgba(245,158,11,0.12)' : 'rgba(6,182,212,0.12)'}"><i data-lucide="${x.icon}" style="width:16px;height:16px;color:${x.tipo === 'danger' ? '#fca5a5' : x.tipo === 'warning' ? '#fbbf24' : '#67e8f9'}"></i></div><div class="flex-1 min-w-0"><div class="text-sm font-semibold">${x.titulo}</div><div class="text-xs text-[var(--fg-muted)] mt-0.5 leading-relaxed">${x.msg}</div><div class="text-[10px] text-[var(--fg-dim)] mt-1 font-mono">${x.tempo}</div></div><span class="w-2 h-2 rounded-full bg-[var(--accent)] flex-shrink-0 mt-1.5"></span></div></div>`).join('')}</div></div>`;
-  p.addEventListener('click', () => p.remove());
-  document.body.appendChild(p);
-  lucide.createIcons();
-};
-
-window.toggleTheme = function() {
-  document.body.classList.toggle('light-mode');
-  const isLight = document.body.classList.contains('light-mode');
-  document.getElementById('themeIcon').setAttribute('data-lucide', isLight ? 'moon' : 'sun');
-  lucide.createIcons();
-  renderAll();
-};
-
-window.setViewMode = function(mode) {
-  viewMode = mode;
-  window.viewMode = mode;
-  const btnGrid = document.getElementById('btnViewGrid');
-  const btnList = document.getElementById('btnViewList');
-  if (btnGrid && btnList) {
-    btnGrid.style.background = mode === 'grid' ? 'rgba(255,107,26,0.12)' : '';
-    btnGrid.style.borderColor = mode === 'grid' ? 'rgba(255,107,26,0.4)' : '';
-    btnGrid.style.color = mode === 'grid' ? 'var(--accent-bright)' : '';
-    btnList.style.background = mode === 'table' ? 'rgba(255,107,26,0.12)' : '';
-    btnList.style.borderColor = mode === 'table' ? 'rgba(255,107,26,0.4)' : '';
-    btnList.style.color = mode === 'table' ? 'var(--accent-bright)' : '';
-  }
-  renderPokaYokes();
-};
-
-// ============================================================
-// MODAL FUNCTIONS - LINHAS (Production Lines)
-// ============================================================
-
-window.openLinhaModal = function(id) {
-  editingLinhaId = id || null;
-  const form = document.getElementById('linhaForm');
-  const overlay = document.getElementById('linhaModalOverlay');
-  const title = document.getElementById('linhaModalTitle');
-  const subtitle = document.getElementById('linhaModalSubtitle');
-  const submitLabel = document.getElementById('linhaSubmitLabel');
-  
-  if (id) {
-    // Edit mode
-    const linha = linhas.find(x => x.firebaseId === id || x.codigo === id);
-    if (!linha) return;
-    
-    title.textContent = 'Editar Linha';
-    subtitle.textContent = 'Atualize as informações da linha';
-    submitLabel.textContent = 'Atualizar';
-    
-    document.getElementById('fLinhaCodigo').value = linha.codigo;
-    document.getElementById('fLinhaNome').value = linha.nome;
-    document.getElementById('fLinhaDescricao').value = linha.descricao || '';
-    
-    initColorPicker('colorPickerGrid', linha.cor || '#1D9E75');
-  } else {
-    // Create mode
-    title.textContent = 'Nova Linha';
-    subtitle.textContent = 'Cadastre uma nova linha';
-    submitLabel.textContent = 'Criar';
-    
-    form.reset();
-    initColorPicker('colorPickerGrid', '#1D9E75');
-  }
-  
-  overlay.classList.remove('hidden');
-  lucide.createIcons();
-};
-
-window.closeLinhaModal = function() {
-  document.getElementById('linhaModalOverlay').classList.add('hidden');
-  document.getElementById('linhaForm').reset();
-  editingLinhaId = null;
-};
-
-window.openEditarLinha = function(id) {
-  window.openLinhaModal(id);
-};
-
-// ============================================================
-// CRUD FUNCTIONS - LINHAS
-// ============================================================
-
-async function createLinha(data) {
-  try {
-    if (isFirebaseConnected) {
-      const newDoc = await addDoc(collection(db, 'linhas'), {
-        ...data,
-        createdAt: serverTimestamp(),
-        createdBy: getCurrentUserId()
-      });
-      console.log('✅ Linha criada no Firebase:', newDoc.id);
-      return newDoc.id;
-    } else {
-      const newLinha = {
-        ...data,
-        firebaseId: 'local_' + Date.now(),
-        createdAt: new Date().toISOString()
-      };
-      linhas.push(newLinha);
-      renderAll();
-      console.log('✅ Linha criada localmente');
-      return newLinha.firebaseId;
-    }
-  } catch (error) {
-    console.error('❌ Erro ao criar linha:', error);
-    throw error;
-  }
-}
-
-async function updateLinha(id, data) {
-  try {
-    if (isFirebaseConnected) {
-      const linha = linhas.find(x => x.firebaseId === id);
-      if (linha) {
-        const docRef = doc(db, 'linhas', id);
-        await updateDoc(docRef, {
-          ...data,
-          updatedAt: serverTimestamp(),
-          updatedBy: getCurrentUserId()
-        });
-        console.log('✅ Linha atualizada no Firebase:', id);
-      }
-    } else {
-      const idx = linhas.findIndex(x => x.firebaseId === id || x.codigo === id);
-      if (idx >= 0) {
-        linhas[idx] = { ...linhas[idx], ...data, updatedAt: new Date().toISOString() };
-        renderAll();
-        console.log('✅ Linha atualizada localmente');
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao atualizar linha:', error);
-    throw error;
-  }
-}
-
-async function deleteLinha(id) {
-  try {
-    if (isFirebaseConnected) {
-      const docRef = doc(db, 'linhas', id);
-      await deleteDoc(docRef);
-      console.log('✅ Linha deletada do Firebase:', id);
-    } else {
-      const idx = linhas.findIndex(x => x.firebaseId === id || x.codigo === id);
-      if (idx >= 0) {
-        linhas.splice(idx, 1);
-        renderAll();
-        console.log('✅ Linha deletada localmente');
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao deletar linha:', error);
-    throw error;
-  }
-}
-
-// Form submission for linhas
-document.addEventListener('DOMContentLoaded', function() {
-  const linhaForm = document.getElementById('linhaForm');
-  if (linhaForm) {
-    linhaForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const data = {
-        codigo: document.getElementById('fLinhaCodigo').value.trim().toUpperCase(),
-        nome: document.getElementById('fLinhaNome').value.trim(),
-        descricao: document.getElementById('fLinhaDescricao').value.trim(),
-        cor: document.querySelector('input[name="linhaCor"]:checked')?.value || '#1D9E75'
-      };
-      
-      // Validate required fields
-      if (!data.codigo || !data.nome) {
-        showToast('Código e Nome são obrigatórios', 'error');
-        return;
-      }
-      
-      try {
-        if (editingLinhaId) {
-          await updateLinha(editingLinhaId, data);
-          showToast(`${data.codigo} atualizada com sucesso`, 'success');
-        } else {
-          await createLinha(data);
-          showToast(`${data.codigo} criada com sucesso`, 'success');
-        }
-        window.closeLinhaModal();
-      } catch (error) {
-        console.error('Erro:', error);
-        showToast('Erro ao salvar linha', 'error');
-      }
-    });
-  }
-});
-
-
-// ============================================================
-// QR CODE FROM URL
-// ============================================================
-function checkUrlParam() {
-  var params = new URLSearchParams(window.location.search);
-  var id = params.get('p') || params.get('id');
-  if (id) {
-    _qrPokaYokeId = id.toUpperCase();
-    console.log('📷 QR Code scan detectado. ID:', _qrPokaYokeId);
-    if (window.history.replaceState) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    tryOpenQrPokaYoke();
-  }
-}
-
-function tryOpenQrPokaYoke() {
-  if (!_qrPokaYokeId) return;
-  var id = _qrPokaYokeId;
-  var p = pokaYokes.find(function(x) { return x.id === id; });
-  if (p) {
-    console.log('✅ Poka-Yoke encontrado:', id);
-    window.switchView('pokayokes');
-    window.openDetail(id);
-    showToast('Poka-Yoke aberto via QR Code: ' + id, 'success');
-    _qrPokaYokeId = null;
-    _qrCheckAttempts = 0;
-    return;
-  }
-  _qrCheckAttempts++;
-  if (_qrCheckAttempts <= 30) {
-    console.log('⏳ Aguardando dados... tentativa', _qrCheckAttempts);
-    setTimeout(tryOpenQrPokaYoke, 500);
-  } else {
-    console.error('❌ Poka-Yoke nao encontrado:', id);
-    showToast('Poka-Yoke nao encontrado: ' + id, 'error');
-    _qrPokaYokeId = null;
-    _qrCheckAttempts = 0;
-  }
-}
-
-// ============================================================
-// INICIALIZAÇÃO DO SISTEMA
-// ============================================================
-async function initSystem() {
-  try {
-    pokaYokes = FALLBACK.pokaYokes;
-    linhas = FALLBACK.linhas;
-    renderAll();
-
-    const user = await initAuth();
-    if (user) {
-      setupFirebaseListeners();
-    }
-
-    setTimeout(function() {
-      checkUrlParam();
-    }, 500);
-
-    console.log('🚀 Sistema inicializado com Firebase!');
-  } catch (error) {
-    console.error('❌ Erro:', error);
-    pokaYokes = FALLBACK.pokaYokes;
-    linhas = FALLBACK.linhas;
-    renderAll();
-    setTimeout(function() {
-      checkUrlParam();
-    }, 500);
-  }
-}
-
-// ============================================================
-// EVENT LISTENERS
-// ============================================================
-document.querySelectorAll('.nav-item').forEach(i => {
-  i.addEventListener('click', () => switchView(i.dataset.view));
-});
-
-document.getElementById('menuToggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('open');
-});
-
-document.querySelectorAll('.modal-backdrop').forEach(el => {
-  el.addEventListener('click', (e) => { if (e.target === el) el.classList.add('hidden'); });
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(el => el.classList.add('hidden'));
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    document.getElementById('globalSearch').focus();
-  }
+window.closeCalModal = function() { document.getElementById('calModalOverlay').classList.add('hidden'); };
+document.getElementById('calModalOverlay').addEventListener('click', e => { if (e.target.id === 'calModalOverlay') window.closeCalModal(); });
+document.getElementById('calForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('calPkId').value;
+  const data = document.getElementById('calData').value;
+  const prox = document.getElementById('calProxima').value;
+  const res = document.getElementById('calResultado').value;
+  const cert = document.getElementById('calCertificado').value.trim();
+  const obs = document.getElementById('calObs').value.trim();
+  if (prox <= data) { showToast('A próxima calibração deve ser depois da data atual', 'error'); return; }
+  const upd = { ultimaVerificacao: data, proximaVerificacao: prox, certificado: cert, ultimoResultadoCalibracao: res };
+  const evento = `Calibração realizada (${res})` + (cert ? ` — ${cert}` : '') + (obs ? ` — ${obs}` : '');
+  await updatePokaYoke(id, upd, evento);
+  window.closeCalModal();
+  showToast(`Calibração de ${id} registrada`, 'success');
 });
 
 // Filtros
@@ -2714,7 +2151,7 @@ const __realFns = {
   confirmDeleteLinha: window.confirmDeleteLinha, applyFilters: window.applyFilters,
   clearFilters: window.clearFilters, sortBy: window.sortBy,
   renderPokaYokes: renderPokaYokes,
-  openCalibracaoDetail: function(id) { showToast(`Detalhes da calibração ${id}`, 'info'); },
+  openCalibracaoDetail: function(id) { window.openDetail(id); },
   setViewMode: window.setViewMode,
   openScanModal: window.openScanModal,
   closeScanModal: window.closeScanModal,
