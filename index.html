@@ -138,22 +138,18 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   .checkbox-custom:checked::after { content: ''; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #0a0d12; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
 
   #printArea { display: none; }
-  @media print {
-      body * { visibility: hidden; }
-      #printArea, #printArea * { visibility: visible; }
-      #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; color: #000 !important; background: #fff !important; }
-      .print-card { border: 2px solid #000; border-radius: 12px; padding: 24px; margin-bottom: 24px; display: flex; gap: 24px; page-break-inside: avoid; }
-      .print-card h2 { font-size: 22px; margin: 0 0 12px 0; color: #000 !important; }
-      .print-card p { margin: 4px 0; font-size: 14px; color: #333 !important; }
-      .print-qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 150px; border-left: 1px dashed #ccc; padding-left: 24px; }
-      .print-qr-container img { width: 120px; height: 120px; }
-      .print-logo { font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 14px; color: #ea580c; margin-bottom: 8px; text-transform: uppercase; }
-      .print-qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-      .print-qr-grid .qr-item { text-align: center; border: 1px solid #ddd; border-radius: 8px; padding: 16px; page-break-inside: avoid; }
-      .print-qr-grid .qr-item img { width: 150px; height: 150px; }
-      .print-qr-grid .qr-item .qr-label { font-size: 12px; font-weight: 600; margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
-      .print-qr-grid .qr-item .qr-sub { font-size: 10px; color: #666; }
-  }
+
+  /* ---- Modal de opções de impressão de etiquetas ---- */
+  .pl-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg-3); color: var(--fg-muted); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+  .pl-opt:hover { border-color: var(--border-bright); color: var(--fg); }
+  .pl-opt.active { border-color: var(--accent); background: rgba(255,107,26,0.1); color: var(--accent-bright); box-shadow: 0 0 0 3px rgba(255,107,26,0.12); }
+  .pl-glyph { display: grid; gap: 2px; width: 30px; height: 42px; padding: 3px; border: 1px solid var(--border-bright); border-radius: 3px; background: #fff; }
+  .pl-glyph i { background: #cbd5e1; border-radius: 1px; display: block; }
+  .pl-opt.active .pl-glyph i { background: var(--accent); }
+  .pl-num { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 18px; line-height: 1; }
+  .pl-sub { font-size: 10px; font-weight: 600; opacity: 0.8; white-space: nowrap; }
+  #printPrevWrap { position: relative; width: 100%; aspect-ratio: 210 / 296; overflow: hidden; background: #fff; border: 1px solid var(--border-bright); border-radius: 6px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+  #printPrevFrame { position: absolute; left: 0; top: 0; width: 794px; height: 1119px; border: 0; transform-origin: 0 0; pointer-events: none; background: #fff; }
 
   @media (max-width: 1024px) {
     .sidebar { position: fixed; left: -280px; z-index: 50; transition: left 0.3s ease; }
@@ -782,6 +778,44 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.closeQRModal()">Fechar</button>
         <button class="btn-accent px-4 py-2.5 rounded-lg text-sm font-bold flex-1 flex items-center justify-center gap-2" onclick="window.printSingleQR()"><i data-lucide="printer" style="width:16px;height:16px"></i> Imprimir</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="printOptsOverlay" class="modal-backdrop hidden">
+  <div class="modal scrollbar" style="max-width: 940px;">
+    <div class="p-6 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg-2)] z-10">
+      <div><h2 class="font-display font-bold text-xl">Imprimir Etiquetas QR</h2><p class="text-xs text-[var(--fg-muted)] mt-0.5" id="poSubtitle">0 dispositivos</p></div>
+      <button class="icon-btn" onclick="window.closePrintOptions()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="p-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div class="space-y-5">
+        <div>
+          <label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-2 block">Etiquetas por página (A4)</label>
+          <div id="poLayouts" class="grid grid-cols-5 gap-2"></div>
+          <p class="text-[11px] text-[var(--fg-dim)] mt-2">Cada etiqueta sai com QR Code vetorial, ID, nome, linha, estação e Part Number — já alinhada e pronta para recortar.</p>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-1.5 block">Ordenar por</label>
+          <select id="poOrder" class="input"><option value="id">ID (PY-001, PY-002…)</option><option value="linha">Linha e estação</option></select>
+        </div>
+        <div class="space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" id="poColor" class="checkbox-custom mt-0.5"><span class="text-sm"><span class="font-semibold">Cabeçalho colorido</span><span class="block text-[11px] text-[var(--fg-dim)]">Desmarque para impressora P&amp;B / economizar toner.</span></span></label>
+          <label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" id="poGuides" class="checkbox-custom mt-0.5"><span class="text-sm"><span class="font-semibold">Guias de corte</span><span class="block text-[11px] text-[var(--fg-dim)]">Linhas tracejadas entre as etiquetas para recorte.</span></span></label>
+        </div>
+        <div class="card p-4 flex items-center gap-3" style="transform:none">
+          <div class="w-10 h-10 rounded-lg bg-[rgba(255,107,26,0.12)] flex items-center justify-center flex-shrink-0"><i data-lucide="printer" class="text-[var(--accent-bright)]" style="width:18px;height:18px"></i></div>
+          <div class="text-sm"><div class="font-bold" id="poSummary">—</div><div class="text-[11px] text-[var(--fg-dim)]">Na janela de impressão: papel A4, margens “Nenhuma” e escala 100%.</div></div>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-[var(--fg-muted)] uppercase tracking-wider mb-2 block flex items-center justify-between"><span>Pré-visualização</span><span class="font-mono normal-case tracking-normal text-[var(--fg-dim)]" id="poPrevCaption">Página 1</span></label>
+        <div id="printPrevWrap"><iframe id="printPrevFrame" title="Pré-visualização da impressão"></iframe></div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-6 border-t border-[var(--border)] sticky bottom-0 bg-[var(--bg-2)]">
+      <button type="button" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.closePrintOptions()">Cancelar</button>
+      <button type="button" class="btn-accent px-4 py-2.5 rounded-lg text-sm font-bold flex-1 flex items-center justify-center gap-2" onclick="window.confirmPrint()"><i data-lucide="printer" style="width:16px;height:16px"></i> Imprimir</button>
     </div>
   </div>
 </div>
@@ -1955,42 +1989,249 @@ window.changeQRSize = function() {
   setQRImage(img, p, size);
 };
 
+// ============================================================
+// IMPRESSÃO PROFISSIONAL DE ETIQUETAS QR
+// ============================================================
+// Folha A4 com grade fixa (mm), QR vetorial (SVG), quebra de página
+// determinística e impressão via iframe isolado do app.
+const LABEL_LAYOUTS = {
+  '1':  { cols: 1, rows: 1, orient: 'v', qr: 108, headH: 16,  head: 15,  id: 34, name: 22,  dl: 14,  clamp: 4, pad: 8, gap: 6,   bar: 2.5, details: 'full', foot: true  },
+  '2':  { cols: 1, rows: 2, orient: 'h', qr: 82,  headH: 13,  head: 12,  id: 28, name: 18,  dl: 12,  clamp: 3, pad: 6, gap: 8,   bar: 2.2, details: 'full', foot: true  },
+  '4':  { cols: 2, rows: 2, orient: 'v', qr: 58,  headH: 10,  head: 10,  id: 22, name: 13,  dl: 9,   clamp: 2, pad: 3, gap: 3,   bar: 2,   details: 'full', foot: true  },
+  '8':  { cols: 2, rows: 4, orient: 'h', qr: 42,  headH: 8,   head: 8,   id: 16, name: 10,  dl: 8,   clamp: 3, pad: 3, gap: 3.5, bar: 1.8, details: 'mid',  foot: true  },
+  '12': { cols: 3, rows: 4, orient: 'v', qr: 30,  headH: 6,   head: 6.5, id: 12, name: 8,   dl: 7,   clamp: 2, pad: 2, gap: 1.5, bar: 1.5, details: 'min',  foot: false }
+};
+const PAGE_GRID_W = 194, PAGE_GRID_H = 274; // mm úteis dentro da A4 (margens 8mm; rodapé 14mm)
+
+let _printIds = [];
+let _printOpts = { layout: '8', color: true, guides: true, order: 'id' };
+try {
+  var _sv = JSON.parse(localStorage.getItem('pkPrintOpts') || 'null');
+  if (_sv && LABEL_LAYOUTS[_sv.layout]) _printOpts = Object.assign(_printOpts, _sv);
+} catch (e) {}
+function savePrintOpts() { try { localStorage.setItem('pkPrintOpts', JSON.stringify(_printOpts)); } catch (e) {} }
+
+// QR em SVG vetorial (nítido em qualquer tamanho/impressora), com quiet zone de 4 módulos
+function qrSvgMarkup(text) {
+  var c = document.createElement('div');
+  c.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+  document.body.appendChild(c);
+  var out = '';
+  try {
+    var q = new QRCode(c, { text: text, width: 64, height: 64, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.Q });
+    var m = q._oQRCode, n = m.getModuleCount(), qz = 4, size = n + qz * 2, d = '';
+    for (var r = 0; r < n; r++) for (var col = 0; col < n; col++) if (m.isDark(r, col)) d += 'M' + (col + qz) + ' ' + (r + qz) + 'h1v1h-1z';
+    out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid meet"><rect width="' + size + '" height="' + size + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  } catch (e) {
+    console.error('QR generation error:', e);
+  } finally {
+    if (c.parentNode) c.parentNode.removeChild(c);
+  }
+  return out;
+}
+
+function labelRows(p, L) {
+  var rows = [];
+  rows.push(['Linha', L.details === 'min' ? p.linha : getLinhaNome(p.linha)]);
+  rows.push(['Estação', p.estacao]);
+  if (L.details !== 'min') rows.push(['Tipo', p.tipo]);
+  if (p.partNumber) rows.push(['Part Number', p.partNumber]);
+  if (L.details !== 'min' && p.partName) rows.push(['Part Name', p.partName]);
+  if (L.details === 'full' && p.instrucaoTrabalho) rows.push(['Instr. Trab.', p.instrucaoTrabalho]);
+  return rows;
+}
+
+function labelHtml(p, L) {
+  var dl = labelRows(p, L).map(function(r) { return '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1] || '—') + '</dd>'; }).join('');
+  return '<div class="cell"><div class="label ' + L.orient + '">' +
+    '<div class="lb-head"><span class="brand"><span class="logo">R</span>Röchling <em>Automotive</em></span><span class="tag">Poka-Yoke</span></div>' +
+    '<div class="lb-body"><div class="lb-qr">' + qrSvgMarkup(getQRText(p)) + '</div>' +
+    '<div class="lb-info"><div class="lb-id">' + escapeHtml(p.id) + '</div><div class="lb-name">' + escapeHtml(p.nome) + '</div><dl>' + dl + '</dl></div></div>' +
+    (L.foot ? '<div class="lb-foot">Escaneie o QR Code para consultar a ficha do dispositivo</div>' : '') +
+    '<div class="lb-bar" style="background:' + getLinhaCor(p.linha) + '"></div>' +
+    '</div></div>';
+}
+
+function labelCss(L) {
+  var footPt = Math.max(5.5, L.dl * 0.85);
+  return '@page{size:A4 portrait;margin:0}' +
+    '*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    "html,body{background:#fff;color:#111;font-family:'Archivo','Segoe UI',Arial,Helvetica,sans-serif}" +
+    'html.pv,html.pv body{overflow:hidden}' +
+    '.page{width:210mm;height:296mm;padding:8mm 8mm 14mm;position:relative;overflow:hidden;break-after:page;page-break-after:always}' +
+    '.page:last-child{break-after:auto;page-break-after:auto}' +
+    '.grid{display:grid;width:' + PAGE_GRID_W + 'mm;height:' + PAGE_GRID_H + 'mm;grid-template-columns:repeat(' + L.cols + ',1fr);grid-template-rows:repeat(' + L.rows + ',1fr)}' +
+    '.cell{padding:1.5mm;min-width:0;min-height:0}' +
+    '.guides .cell{outline:.2mm dashed #9ca3af;outline-offset:-.2mm}' +
+    '.label{width:100%;height:100%;display:flex;flex-direction:column;border:.35mm solid #111;border-radius:2.5mm;overflow:hidden;background:#fff;break-inside:avoid}' +
+    '.lb-head{height:' + L.headH + 'mm;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;background:#ea580c;color:#fff;font-size:' + L.head + 'pt}' +
+    '.brand{display:flex;align-items:center;gap:1.6mm;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}' +
+    '.brand em{font-style:normal;font-weight:600;opacity:.92}' +
+    '.logo{display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:.35em;background:#fff;color:#ea580c;font-weight:900;line-height:1}' +
+    '.tag{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.85em;white-space:nowrap}' +
+    '.mono .lb-head{background:#fff;color:#111;border-bottom:.35mm solid #111}' +
+    '.mono .logo{background:#111;color:#fff}' +
+    '.mono .lb-bar{display:none}' +
+    '.lb-body{flex:1;min-height:0;display:flex;align-items:center;gap:' + L.gap + 'mm;padding:' + L.pad + 'mm}' +
+    '.v .lb-body{flex-direction:column;justify-content:center;text-align:center}' +
+    '.lb-qr{flex:none;width:' + L.qr + 'mm;height:' + L.qr + 'mm}' +
+    '.lb-qr svg{display:block;width:100%;height:100%}' +
+    '.lb-info{flex:1;min-width:0;width:100%}' +
+    ".lb-id{font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-weight:800;font-size:" + L.id + 'pt;line-height:1.1;letter-spacing:.02em}' +
+    '.lb-name{font-weight:700;font-size:' + L.name + 'pt;line-height:1.2;margin-top:.8mm;display:-webkit-box;-webkit-line-clamp:' + L.clamp + ';-webkit-box-orient:vertical;overflow:hidden}' +
+    'dl{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:2mm;row-gap:.5mm;margin-top:1.6mm;font-size:' + L.dl + 'pt;line-height:1.25;text-align:left}' +
+    'dt{font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;font-size:.82em;white-space:nowrap;padding-top:.1em}' +
+    'dd{font-weight:700;color:#111;overflow-wrap:anywhere}' +
+    '.lb-foot{flex:none;text-align:center;font-size:' + footPt + 'pt;color:#4b5563;padding:1mm 2mm;border-top:.2mm solid #d1d5db}' +
+    '.lb-bar{flex:none;height:' + L.bar + 'mm}' +
+    '.pfoot{position:absolute;left:8mm;right:8mm;bottom:5mm;display:flex;justify-content:space-between;font-size:7pt;color:#6b7280}';
+}
+
+function buildLabelsDoc(items, opts) {
+  var L = LABEL_LAYOUTS[opts.layout] || LABEL_LAYOUTS['8'];
+  var per = L.cols * L.rows;
+  var total = Math.max(1, Math.ceil(items.length / per));
+  var pages = [];
+  for (var i = 0; i < items.length; i += per) pages.push(items.slice(i, i + per));
+  if (opts.preview) pages = pages.slice(0, 1);
+  var date = new Date().toLocaleDateString('pt-BR');
+  var body = pages.map(function(pg, pi) {
+    return '<section class="page"><div class="grid">' + pg.map(function(p) { return labelHtml(p, L); }).join('') + '</div>' +
+      '<div class="pfoot"><span>Röchling Automotive • Poka-Yoke Management System</span><span>' + date + '</span><span>Página ' + (pi + 1) + ' de ' + total + '</span></div></section>';
+  }).join('');
+  return '<!DOCTYPE html><html lang="pt-BR"' + (opts.preview ? ' class="pv"' : '') + '><head><meta charset="UTF-8"><title>Etiquetas QR - Poka-Yokes</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">' +
+    '<style>' + labelCss(L) + '</style></head><body class="' + (opts.guides ? 'guides ' : '') + (opts.color ? '' : 'mono') + '">' + body + '</body></html>';
+}
+
+// Imprime em iframe isolado: espera estilos/fontes carregarem antes de abrir o diálogo
+function runPrint(html) {
+  var old = document.getElementById('printFrame');
+  if (old) old.remove();
+  var f = document.createElement('iframe');
+  f.id = 'printFrame';
+  f.title = 'Impressão de etiquetas';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;';
+  var done = false;
+  function go() {
+    if (done) return;
+    done = true;
+    try {
+      var w = f.contentWindow;
+      w.addEventListener('afterprint', function() { setTimeout(function() { if (f.parentNode) f.remove(); }, 500); });
+      w.focus();
+      w.print();
+    } catch (e) {
+      console.error(e);
+      showToast('Não foi possível abrir a impressão', 'error');
+    }
+    setTimeout(function() { if (f.parentNode) f.remove(); }, 120000);
+  }
+  f.onload = function() {
+    var d = f.contentWindow.document;
+    var ready = d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve();
+    Promise.race([ready, new Promise(function(r) { setTimeout(r, 2500); })]).then(function() { setTimeout(go, 150); });
+  };
+  setTimeout(go, 6000);
+  f.srcdoc = html;
+  document.body.appendChild(f);
+}
+
+function getPrintItems() {
+  var items = _printIds.map(function(id) { return pokaYokes.find(function(p) { return p.id === id; }); }).filter(Boolean);
+  var num = function(p) { return parseInt(String(p.id).replace(/\D/g, '')) || 0; };
+  if (_printOpts.order === 'linha') {
+    items.sort(function(a, b) { return String(a.linha).localeCompare(String(b.linha)) || String(a.estacao).localeCompare(String(b.estacao), 'pt-BR', { numeric: true }) || num(a) - num(b); });
+  } else {
+    items.sort(function(a, b) { return num(a) - num(b); });
+  }
+  return items;
+}
+
+function buildPrintLayoutButtons() {
+  var wrap = document.getElementById('poLayouts');
+  if (!wrap || wrap.children.length) return;
+  wrap.innerHTML = Object.keys(LABEL_LAYOUTS).map(function(k) {
+    var L = LABEL_LAYOUTS[k], cells = '';
+    for (var i = 0; i < L.cols * L.rows; i++) cells += '<i></i>';
+    var mm = Math.round(PAGE_GRID_W / L.cols) + '×' + Math.round(PAGE_GRID_H / L.rows);
+    return '<button type="button" class="pl-opt" data-layout="' + k + '"><span class="pl-glyph" style="grid-template-columns:repeat(' + L.cols + ',1fr);grid-template-rows:repeat(' + L.rows + ',1fr)">' + cells + '</span><span class="pl-num">' + k + '</span><span class="pl-sub">' + mm + ' mm</span></button>';
+  }).join('');
+  wrap.querySelectorAll('.pl-opt').forEach(function(b) {
+    b.addEventListener('click', function() { _printOpts.layout = b.dataset.layout; syncPrintOptsUI(); updatePrintPreview(); });
+  });
+}
+
+function syncPrintOptsUI() {
+  document.querySelectorAll('#poLayouts .pl-opt').forEach(function(b) { b.classList.toggle('active', b.dataset.layout === _printOpts.layout); });
+  document.getElementById('poColor').checked = !!_printOpts.color;
+  document.getElementById('poGuides').checked = !!_printOpts.guides;
+  document.getElementById('poOrder').value = _printOpts.order;
+}
+
+function updatePrintPreview() {
+  var items = getPrintItems();
+  var L = LABEL_LAYOUTS[_printOpts.layout];
+  var per = L.cols * L.rows;
+  var pages = Math.max(1, Math.ceil(items.length / per));
+  document.getElementById('poSubtitle').textContent = items.length + (items.length === 1 ? ' dispositivo selecionado' : ' dispositivos selecionados');
+  document.getElementById('poSummary').textContent = items.length + (items.length === 1 ? ' etiqueta' : ' etiquetas') + ' • ' + pages + (pages === 1 ? ' página A4' : ' páginas A4');
+  document.getElementById('poPrevCaption').textContent = 'Página 1 de ' + pages;
+  var frame = document.getElementById('printPrevFrame');
+  frame.srcdoc = buildLabelsDoc(items, { layout: _printOpts.layout, color: _printOpts.color, guides: _printOpts.guides, preview: true });
+  applyPreviewScale();
+}
+
+function applyPreviewScale() {
+  var wrap = document.getElementById('printPrevWrap');
+  var frame = document.getElementById('printPrevFrame');
+  if (!wrap || !frame || !wrap.clientWidth) return;
+  frame.style.transform = 'scale(' + (wrap.clientWidth / 794) + ')';
+}
+
+function openPrintOptions(ids, layout) {
+  _printIds = ids.slice();
+  if (layout && LABEL_LAYOUTS[layout]) _printOpts.layout = layout;
+  buildPrintLayoutButtons();
+  syncPrintOptsUI();
+  document.getElementById('printOptsOverlay').classList.remove('hidden');
+  lucide.createIcons();
+  requestAnimationFrame(updatePrintPreview);
+}
+
+window.closePrintOptions = function() {
+  document.getElementById('printOptsOverlay').classList.add('hidden');
+};
+
+window.confirmPrint = function() {
+  var items = getPrintItems();
+  if (!items.length) { showToast('Nenhum dispositivo válido para imprimir.', 'error'); return; }
+  savePrintOpts();
+  var html = buildLabelsDoc(items, { layout: _printOpts.layout, color: _printOpts.color, guides: _printOpts.guides });
+  window.closePrintOptions();
+  showToast('Preparando ' + items.length + (items.length === 1 ? ' etiqueta…' : ' etiquetas…'), 'info');
+  runPrint(html);
+};
+
 window.printSingleQR = function() {
-  const size = document.getElementById('qrSizeSelect').value;
-  const p = pokaYokes.find(x => x.id === document.getElementById('qrModalId').textContent);
-  if (!p) return;
-  var printDiv = document.createElement('div');
-  printDiv.style.cssText = "text-align:center; padding: 40px 20px; font-family: 'Manrope', sans-serif;";
-  printDiv.innerHTML = '<div style="font-weight: 900; font-size: 14px; color: #ea580c; text-transform: uppercase;">Röchling Automotive</div><h2 style="font-family: Archivo, sans-serif; font-size: 20px; margin: 0 0 12px 0; color: #000;">' + escapeHtml(p.nome) + '</h2><p style="font-family: JetBrains Mono, monospace; font-size: 12px; margin: 0 0 24px 0; color: #333;">ID: ' + p.id + ' | Estação: ' + p.estacao + '</p><img id="printSingleQRImg" style="width: ' + size + 'px; height: ' + size + 'px;" /><p style="font-family: JetBrains Mono, monospace; font-size: 10px; margin-top: 16px; color: #666;">Escaneie para mais informações</p>';
-  document.getElementById('printArea').innerHTML = '';
-  document.getElementById('printArea').appendChild(printDiv);
-  setQRImage(document.getElementById('printSingleQRImg'), p, size);
-  setTimeout(function() { window.print(); }, 200);
+  var id = document.getElementById('qrModalId').textContent;
+  var map = { '100': '12', '150': '8', '200': '4', '300': '2' };
+  var layout = map[document.getElementById('qrSizeSelect').value] || '4';
+  window.closeQRModal();
+  openPrintOptions([id], layout);
 };
 
 window.printQRMass = function() {
-  const selected = Array.from(selectedForPrint);
-  if (selected.length === 0) { showToast('Selecione pelo menos um dispositivo.', 'info'); return; }
-  const items = selected.map(id => pokaYokes.find(p => p.id === id)).filter(Boolean);
-  if (items.length === 0) { showToast('Nenhum dispositivo válido.', 'error'); return; }
-  showToast('Preparando ' + items.length + ' QR Codes...', 'info');
-  var container = document.createElement('div');
-  container.style.cssText = "font-family: 'Manrope', sans-serif; padding: 20px;";
-  container.innerHTML = '<div style="text-align:center; margin-bottom: 24px;"><div style="font-weight: 900; font-size: 16px; color: #ea580c; text-transform: uppercase;">Röchling Automotive</div><h1 style="font-family: Archivo, sans-serif; font-size: 24px; margin: 4px 0;">QR Codes - Poka-Yokes</h1><p style="color: #666; font-size: 14px;">' + items.length + ' dispositivos • ' + new Date().toLocaleDateString('pt-BR') + '</p></div><div class="print-qr-grid" id="printMassGrid"></div><div style="text-align:center; margin-top: 32px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 16px;">Röchling Automotive Poka-Yoke Management System</div>';
-  document.getElementById('printArea').innerHTML = '';
-  document.getElementById('printArea').appendChild(container);
-  var grid = document.getElementById('printMassGrid');
-  var pending = items.length;
-  items.forEach(function(p) {
-    var itemDiv = document.createElement('div');
-    itemDiv.className = 'qr-item';
-    var imgId = 'qr-mass-' + p.id;
-    itemDiv.innerHTML = '<img id="' + imgId + '" alt="QR Code ' + p.id + '" style="width:150px;height:150px;" /><div class="qr-label">' + p.id + '</div><div class="qr-sub">' + escapeHtml(p.nome) + '</div>';
-    grid.appendChild(itemDiv);
-    setQRImage(document.getElementById(imgId), p, 150);
-  });
-  setTimeout(function() { window.print(); }, 300);
+  var ids = Array.from(selectedForPrint);
+  if (ids.length === 0) { showToast('Selecione pelo menos um dispositivo.', 'info'); return; }
+  openPrintOptions(ids);
 };
+
+document.getElementById('poColor').addEventListener('change', function(e) { _printOpts.color = e.target.checked; updatePrintPreview(); });
+document.getElementById('poGuides').addEventListener('change', function(e) { _printOpts.guides = e.target.checked; updatePrintPreview(); });
+document.getElementById('poOrder').addEventListener('change', function(e) { _printOpts.order = e.target.value; updatePrintPreview(); });
+window.addEventListener('resize', applyPreviewScale);
 
 window.toggleSelectAll = function() {
   const checked = document.getElementById('selectAll').checked;
