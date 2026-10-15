@@ -2689,13 +2689,37 @@ window.toggleNotifications = function() {
   lucide.createIcons();
 };
 
+// Tema dinâmico: modo dia preferencial (06h–18h claro, demais horários escuro)
+function themeByHour() { const h = new Date().getHours(); return (h >= 6 && h < 18) ? 'light' : 'dark'; }
+function applyTheme(mode, rerender) {
+  const isLight = mode === 'light';
+  document.body.classList.toggle('light-mode', isLight);
+  const ic = document.getElementById('themeIcon');
+  if (ic) ic.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+  if (window.lucide) lucide.createIcons();
+  if (rerender && typeof renderAll === 'function') { try { renderAll(); } catch (e) {} }
+}
+// Escolha manual vale apenas até a próxima mudança de período (dia/noite)
+function currentTheme() {
+  const auto = themeByHour();
+  try {
+    const o = JSON.parse(localStorage.getItem('themeOverride') || 'null');
+    if (o && o.period === auto) return o.mode;
+    localStorage.removeItem('themeOverride');
+  } catch (e) {}
+  return auto;
+}
 window.toggleTheme = function() {
-  document.body.classList.toggle('light-mode');
-  const isLight = document.body.classList.contains('light-mode');
-  document.getElementById('themeIcon').setAttribute('data-lucide', isLight ? 'moon' : 'sun');
-  lucide.createIcons();
-  renderAll();
+  const next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+  try { localStorage.setItem('themeOverride', JSON.stringify({ mode: next, period: themeByHour() })); } catch (e) {}
+  applyTheme(next, true);
 };
+applyTheme(currentTheme(), false);
+setInterval(function() {
+  const want = currentTheme();
+  const isLight = document.body.classList.contains('light-mode');
+  if ((want === 'light') !== isLight) applyTheme(want, true);
+}, 60000);
 
 window.setViewMode = function(mode) {
   viewMode = mode;
