@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0d12" id="metaTheme">
+<script>/* aplica o tema antes de pintar (evita flash) */
+(function(){try{var h=new Date().getHours(),a=(h>=6&&h<18)?"light":"dark",m=a,o=JSON.parse(localStorage.getItem("pkViewThemeOverride")||"null");if(o&&o.period===a)m=o.mode;if(m==="light")document.documentElement.classList.add("light")}catch(e){}})();</script>
 <title>Poka-Yoke | Röchling Automotive</title>
 
 <!-- Firebase Compat -->
@@ -26,6 +29,32 @@
     --amber:    #f59e0b;
     --red:      #ef4444;
     --cyan:     #06b6d4;
+    --accent-text: #ff9a52;
+    --track:    #1d2532;
+  }
+  html.light {
+    --bg:       #f1f5f9;
+    --bg2:      #ffffff;
+    --bg3:      #e2e8f0;
+    --border:   rgba(15,23,42,0.12);
+    --fg:       #0f172a;
+    --fg-muted: #475569;
+    --fg-dim:   #64748b;
+    --accent:   #ea580c;
+    --green:    #16a34a;
+    --amber:    #b45309;
+    --red:      #dc2626;
+    --cyan:     #0e7490;
+    --accent-text: #c2410c;
+    --track:    #e2e8f0;
+  }
+  html.light .logo-dot { box-shadow: none; }
+  html.light .info-card, html.light .eff-row, html.light .descricao { box-shadow: 0 1px 2px rgba(15,23,42,0.05); }
+  body, header, .info-card, .eff-row, .descricao, footer { transition: background-color .3s ease, color .3s ease, border-color .3s ease; }
+  .theme-btn {
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; flex-shrink: 0;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--fg-muted);
+    font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -257,6 +286,7 @@
       <span class="logo-text">Röchling Automotive</span>
     </div>
     <span class="readonly-badge">🔒 Somente leitura</span>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">🌙</button>
   </header>
 
   <main>
@@ -280,7 +310,7 @@
     <div class="eff-row">
       <div class="ring-wrap">
         <svg width="80" height="80" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="32" stroke="#1d2532" stroke-width="7" fill="none"/>
+          <circle cx="40" cy="40" r="32" stroke="var(--track)" stroke-width="7" fill="none"/>
           <circle id="ringFill" cx="40" cy="40" r="32" stroke="#22c55e" stroke-width="7" fill="none"
             stroke-linecap="round"
             stroke-dasharray="201.06"
@@ -367,6 +397,32 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ─── TEMA POR HORÁRIO (claro 06h–18h, escuro nos demais) ───
+function themeByHour() { const h = new Date().getHours(); return (h >= 6 && h < 18) ? 'light' : 'dark'; }
+function currentTheme() {
+  const auto = themeByHour();
+  try {
+    const o = JSON.parse(localStorage.getItem('pkViewThemeOverride') || 'null');
+    if (o && o.period === auto) return o.mode;   // escolha manual vale só até o período mudar
+    localStorage.removeItem('pkViewThemeOverride');
+  } catch (e) {}
+  return auto;
+}
+function applyTheme(mode) {
+  const light = mode === 'light';
+  document.documentElement.classList.toggle('light', light);
+  const b = document.getElementById('themeBtn'); if (b) b.textContent = light ? '🌙' : '☀️';
+  const m = document.getElementById('metaTheme'); if (m) m.setAttribute('content', light ? '#f1f5f9' : '#0a0d12');
+}
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('light') ? 'dark' : 'light';
+  try { localStorage.setItem('pkViewThemeOverride', JSON.stringify({ mode: next, period: themeByHour() })); } catch (e) {}
+  applyTheme(next);
+}
+applyTheme(currentTheme());
+setInterval(() => { const w = currentTheme(); if ((w === 'light') !== document.documentElement.classList.contains('light')) applyTheme(w); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) applyTheme(currentTheme()); });
+
 // ─── HELPERS ───
 function fmtDate(d) {
   if (!d) return '—';
@@ -410,15 +466,15 @@ function render(p) {
     'Sensor': '#06b6d4', 'Mecânico': '#a855f7', 'Óptico': '#ec4899',
     'Pneumático': '#f59e0b', 'Elétrico': '#22c55e', 'Eletrônico': '#3b82f6'
   };
-  const tc = TIPO_COLORS[p.tipo] || '#8a98ac';
+  const tc = TIPO_COLORS[p.tipo] || '#64748b';
   let tagsHtml = '';
   if (p.tipo) tagsHtml += `<span class="tag" style="background:${tc}15;color:${tc};border-color:${tc}40">${escHtml(p.tipo)}</span>`;
-  if (p.linha) tagsHtml += `<span class="tag" style="background:rgba(255,107,26,0.1);color:#ff9a52;border-color:rgba(255,107,26,0.3)">${escHtml(p.linha)}</span>`;
+  if (p.linha) tagsHtml += `<span class="tag" style="background:rgba(255,107,26,0.1);color:var(--accent-text);border-color:rgba(255,107,26,0.35)">${escHtml(p.linha)}</span>`;
   document.getElementById('pkTags').innerHTML = tagsHtml;
 
   // Eficiência ring
   const ef = parseFloat(p.eficiencia) || 0;
-  const efColor = ef > 95 ? '#22c55e' : ef > 85 ? '#f59e0b' : '#ef4444';
+  const efColor = ef > 95 ? 'var(--green)' : ef > 85 ? 'var(--amber)' : 'var(--red)';
   const circ = 2 * Math.PI * 32; // r=32
   const offset = circ - (ef / 100) * circ;
   const ring = document.getElementById('ringFill');
@@ -445,11 +501,11 @@ function render(p) {
   if (d !== null) {
     if (d < 0) {
       proxEl.className = 'info-card-value mono danger';
-      proxSub.style.color = '#ef4444';
+      proxSub.style.color = 'var(--red)';
       proxSub.textContent = `⚠️ Vencido há ${Math.abs(d)} dias`;
     } else if (d <= 7) {
       proxEl.className = 'info-card-value mono warn';
-      proxSub.style.color = '#f59e0b';
+      proxSub.style.color = 'var(--amber)';
       proxSub.textContent = `⚠️ Vence em ${d} dia${d !== 1 ? 's' : ''}`;
     } else {
       proxEl.className = 'info-card-value mono';
