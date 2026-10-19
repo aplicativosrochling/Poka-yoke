@@ -469,6 +469,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Gestão de Dispositivos</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Poka-Yokes</h1></div>
         <div class="flex gap-2 flex-wrap">
+          <button id="dupSelectedBtn" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2" style="display:none" onclick="window.openDuplicateSelected()"><i data-lucide="copy" style="width:15px;height:15px"></i>Duplicar (<span id="dupCount">0</span>)</button>
           <button id="printSelectedBtn" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2" style="display:none" onclick="window.printQRMass()"><i data-lucide="qr-code" style="width:15px;height:15px"></i>Imprimir QR (<span id="printCount">0</span>)</button>
           <button class="btn-accent px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="window.openModal()"><i data-lucide="plus" style="width:16px;height:16px"></i>Novo Poka-Yoke</button>
         </div>
@@ -719,6 +720,39 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   </div>
 </div>
 
+<div id="dupOverlay" class="modal-backdrop hidden">
+  <div class="modal scrollbar" style="max-width: 1180px;">
+    <div class="p-5 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--bg-2)] z-10">
+      <div><h2 class="font-display font-bold text-xl">Duplicar Poka-Yokes</h2><p class="text-xs text-[var(--fg-muted)] mt-0.5" id="dupSubtitle">—</p></div>
+      <button class="icon-btn" onclick="window.closeDuplicateModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div class="filter-bar" style="margin-bottom:0">
+        <div class="filter-group"><label>Cópias por item</label><input id="dupCopies" type="number" min="1" max="50" value="1" style="min-width:60px;width:70px"></div>
+        <div class="filter-group"><label>Estação</label>
+          <select id="dupEstMode"><option value="same">Manter igual</option><option value="inc">Auto-incrementar (EST-A04 → EST-A05…)</option><option value="blank">Deixar em branco</option></select></div>
+        <div class="filter-group"><label>Nome</label>
+          <select id="dupNameMode"><option value="same">Manter igual</option><option value="copy">Acrescentar “(cópia)”</option></select></div>
+        <div class="filter-group"><label>Datas</label>
+          <select id="dupDateMode"><option value="keep">Manter datas</option><option value="today">Verificação = hoje (+365 d)</option></select></div>
+        <div class="filter-actions"><button type="button" class="btn-apply" onclick="window.dupRegenerate()">Gerar cópias</button></div>
+      </div>
+      <p class="text-[11px] text-[var(--fg-dim)]">Tudo na tabela é editável (ID, nome, linha, estação, tipo, status, Part Number, Part Name, Instrução, responsável). Eficiência e descrição/matriz de decisão são copiadas do original. O histórico das cópias começa limpo. “Gerar cópias” refaz a tabela e descarta edições.</p>
+      <div class="card overflow-hidden" style="transform:none"><div class="overflow-x-auto scrollbar" style="max-height:52vh"><table class="w-full text-sm" style="min-width:1100px">
+        <thead><tr class="text-left border-b border-[var(--border)] text-[10px] uppercase tracking-wider text-[var(--fg-dim)] font-bold sticky top-0 bg-[var(--bg-2)]">
+          <th class="px-2 py-2">Origem</th><th class="px-2 py-2">ID *</th><th class="px-2 py-2">Nome *</th><th class="px-2 py-2">Linha *</th><th class="px-2 py-2">Estação *</th><th class="px-2 py-2">Tipo</th><th class="px-2 py-2">Status</th><th class="px-2 py-2">Part Number</th><th class="px-2 py-2">Part Name</th><th class="px-2 py-2">Instr. Trab.</th><th class="px-2 py-2">Responsável</th><th class="px-2 py-2"></th>
+        </tr></thead>
+        <tbody id="dupBody"></tbody>
+      </table></div></div>
+      <div id="dupError" class="po-warn bad hidden"></div>
+    </div>
+    <div class="flex items-center gap-3 p-5 border-t border-[var(--border)] sticky bottom-0 bg-[var(--bg-2)]">
+      <button type="button" class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1" onclick="window.closeDuplicateModal()">Cancelar</button>
+      <button type="button" id="dupSaveBtn" class="btn-accent px-4 py-2.5 rounded-lg text-sm font-bold flex-1 flex items-center justify-center gap-2" onclick="window.saveDuplicates()"><i data-lucide="copy-check" style="width:16px;height:16px"></i><span id="dupSaveLabel">Criar cópias</span></button>
+    </div>
+  </div>
+</div>
+
 <div id="deleteOverlay" class="modal-backdrop hidden">
   <div class="modal" style="max-width:420px">
     <div class="p-6 text-center">
@@ -966,7 +1000,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     'openLinhaModal','closeLinhaModal','openEditarLinha',
     'openDeleteLinhaModal','closeDeleteLinhaModal','confirmDeleteLinha',
     'applyFilters','clearFilters','sortBy','switchView',
-    'renderPokaYokes','openCalibracaoDetail','showToast','setViewMode'
+    'renderPokaYokes','openCalibracaoDetail','showToast','setViewMode',
+    'openDuplicateModal','openDuplicateSelected','closeDuplicateModal','dupRegenerate','saveDuplicates','dupRemoveRow'
   ];
   fns.forEach(function(name) {
     window[name] = function() {
@@ -1635,7 +1670,7 @@ function createCard(p, q = '') {
   const isChecked = selectedForPrint.has(p.id) ? 'checked' : '';
   const linhaNome = getLinhaNome(p.linha);
   const linhaCor = getLinhaCor(p.linha);
-  return `<div class="card card-glow p-5 cursor-pointer relative" onclick="window.openDetail('${p.id}')"><div class="absolute top-4 right-4 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></div><div class="flex items-start justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${tc}"></span><span class="font-mono text-xs font-bold text-[var(--fg-muted)]">${p.id}</span></div></div><h3 class="font-display font-bold text-base mb-2 leading-tight line-clamp-2" style="min-height:44px">${highlight(p.nome, q)}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${linhaCor}"></span><span>${linhaNome} • ${p.estacao}</span></div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Tipo</div><div class="text-sm font-semibold" style="color:${tc}">${p.tipo}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Responsável</div><div class="text-sm font-semibold truncate">${escapeHtml(p.responsavel || '—')}</div></div></div><div class="mb-4"><div class="flex items-center justify-between mb-1.5"><span class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</span><span class="text-sm font-mono font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div><div class="stat-bar"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:linear-gradient(90deg,${c},${c}cc)"></div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="badge ${s.cls}"><span class="pulse-dot" style="color:${s.color}"></span>${p.status}</span><div class="flex gap-1" onclick="event.stopPropagation()"><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></div></div>`;
+  return `<div class="card card-glow p-5 cursor-pointer relative" onclick="window.openDetail('${p.id}')"><div class="absolute top-4 right-4 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></div><div class="flex items-start justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${tc}"></span><span class="font-mono text-xs font-bold text-[var(--fg-muted)]">${p.id}</span></div></div><h3 class="font-display font-bold text-base mb-2 leading-tight line-clamp-2" style="min-height:44px">${highlight(p.nome, q)}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${linhaCor}"></span><span>${linhaNome} • ${p.estacao}</span></div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Tipo</div><div class="text-sm font-semibold" style="color:${tc}">${p.tipo}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Responsável</div><div class="text-sm font-semibold truncate">${escapeHtml(p.responsavel || '—')}</div></div></div><div class="mb-4"><div class="flex items-center justify-between mb-1.5"><span class="text-[11px] text-[var(--fg-dim)] uppercase tracking-wider font-bold">Eficiência</span><span class="text-sm font-mono font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div><div class="stat-bar"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:linear-gradient(90deg,${c},${c}cc)"></div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="badge ${s.cls}"><span class="pulse-dot" style="color:${s.color}"></span>${p.status}</span><div class="flex gap-1" onclick="event.stopPropagation()"><button class="icon-btn !w-8 !h-8" onclick="window.openDuplicateModal(['${p.id}'])" title="Duplicar"><i data-lucide="copy" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></div></div>`;
 }
 
 function createRow(p, q = '') {
@@ -1643,7 +1678,7 @@ function createRow(p, q = '') {
   const c = p.eficiencia > 95 ? '#22c55e' : p.eficiencia > 85 ? '#f59e0b' : '#ef4444';
   const isChecked = selectedForPrint.has(p.id) ? 'checked' : '';
   const linhaNome = getLinhaNome(p.linha);
-  return `<tr class="table-row border-b border-[var(--border)] cursor-pointer" onclick="window.openDetail('${p.id}')"><td class="px-4 py-3" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></td><td class="px-4 py-3 font-mono font-bold text-[var(--accent-bright)]">${p.id}</td><td class="px-4 py-3 max-w-xs"><div class="font-semibold truncate">${highlight(p.nome, q)}</div><div class="text-[11px] text-[var(--fg-dim)]">${p.responsavel}</div></td><td class="px-4 py-3 text-[var(--fg-muted)] text-[13px]">${linhaNome}</td><td class="px-4 py-3"><span class="badge" style="background:${TIPOS_COLORS[p.tipo] || '#8a98ac'}20;color:${TIPOS_COLORS[p.tipo] || '#8a98ac'};border:1px solid ${TIPOS_COLORS[p.tipo] || '#8a98ac'}40">${p.tipo}</span></td><td class="px-4 py-3"><span class="badge ${s.cls}">${p.status}</span></td><td class="px-4 py-3"><div class="flex items-center gap-2"><div class="stat-bar w-16"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:${c}"></div></div><span class="font-mono text-xs font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div></td><td class="px-4 py-3 font-mono text-xs text-[var(--fg-muted)]">${fmtDate(p.ultimaVerificacao)}</td><td class="px-4 py-3 text-right" onclick="event.stopPropagation()"><div class="flex gap-1 justify-end"><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></td></tr>`;
+  return `<tr class="table-row border-b border-[var(--border)] cursor-pointer" onclick="window.openDetail('${p.id}')"><td class="px-4 py-3" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-custom" onchange="window.togglePrintSelect('${p.id}', this.checked)" ${isChecked}></td><td class="px-4 py-3 font-mono font-bold text-[var(--accent-bright)]">${p.id}</td><td class="px-4 py-3 max-w-xs"><div class="font-semibold truncate">${highlight(p.nome, q)}</div><div class="text-[11px] text-[var(--fg-dim)]">${p.responsavel}</div></td><td class="px-4 py-3 text-[var(--fg-muted)] text-[13px]">${linhaNome}</td><td class="px-4 py-3"><span class="badge" style="background:${TIPOS_COLORS[p.tipo] || '#8a98ac'}20;color:${TIPOS_COLORS[p.tipo] || '#8a98ac'};border:1px solid ${TIPOS_COLORS[p.tipo] || '#8a98ac'}40">${p.tipo}</span></td><td class="px-4 py-3"><span class="badge ${s.cls}">${p.status}</span></td><td class="px-4 py-3"><div class="flex items-center gap-2"><div class="stat-bar w-16"><div class="stat-bar-fill" style="width:${p.eficiencia}%;background:${c}"></div></div><span class="font-mono text-xs font-bold" style="color:${c}">${p.eficiencia.toFixed(1)}%</span></div></td><td class="px-4 py-3 font-mono text-xs text-[var(--fg-muted)]">${fmtDate(p.ultimaVerificacao)}</td><td class="px-4 py-3 text-right" onclick="event.stopPropagation()"><div class="flex gap-1 justify-end"><button class="icon-btn !w-8 !h-8" onclick="window.openDuplicateModal(['${p.id}'])" title="Duplicar"><i data-lucide="copy" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openQRModal('${p.id}')" title="QR"><i data-lucide="qr-code" style="width:14px;height:14px"></i></button><button class="icon-btn accent !w-8 !h-8" onclick="window.openDetail('${p.id}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button><button class="icon-btn !w-8 !h-8" onclick="window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="icon-btn danger !w-8 !h-8" onclick="window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></div></td></tr>`;
 }
 
 // Linhas
@@ -2045,6 +2080,7 @@ window.openDetail = function(id) {
     </div>
     <div class="flex gap-2 p-6 border-t border-[var(--border)] sticky bottom-0 bg-[var(--bg-2)]">
       <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1 flex items-center justify-center gap-2" onclick="window.openQRModal('${p.id}')"><i data-lucide="qr-code" style="width:14px;height:14px"></i>QR</button>
+      <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1 flex items-center justify-center gap-2" onclick="window.closeDetail();window.openDuplicateModal(['${p.id}'])"><i data-lucide="copy" style="width:14px;height:14px"></i>Duplicar</button>
       <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex-1 flex items-center justify-center gap-2" onclick="window.closeDetail();window.openModal('${p.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i>Editar</button>
       <button class="btn-danger px-4 py-2.5 rounded-lg text-sm flex-1 flex items-center justify-center gap-2" onclick="window.closeDetail();window.openDeleteModal('${p.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i>Excluir</button>
     </div>`;
@@ -2615,6 +2651,8 @@ window.toggleSelectAll = function() {
   if (isChecked) { visible.forEach(p => selectedForPrint.add(p.id)); } else { visible.forEach(p => selectedForPrint.delete(p.id)); }
   document.getElementById('printCount').textContent = selectedForPrint.size;
   document.getElementById('printSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
+  document.getElementById('dupCount').textContent = selectedForPrint.size;
+  document.getElementById('dupSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
   document.getElementById('selectAll').checked = isChecked;
   if (document.getElementById('selectAllTable')) { document.getElementById('selectAllTable').checked = isChecked; }
   renderPokaYokes();
@@ -2624,6 +2662,8 @@ window.togglePrintSelect = function(id, checked) {
   if (checked) selectedForPrint.add(id); else selectedForPrint.delete(id);
   document.getElementById('printCount').textContent = selectedForPrint.size;
   document.getElementById('printSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
+  document.getElementById('dupCount').textContent = selectedForPrint.size;
+  document.getElementById('dupSelectedBtn').style.display = selectedForPrint.size > 0 ? 'inline-flex' : 'none';
   renderPokaYokes();
 };
 
@@ -2904,6 +2944,184 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // ============================================================
+// DUPLICAÇÃO DE POKA-YOKES (individual e em lote)
+// ============================================================
+let _dupSources = [];
+let _dupRows = [];
+
+function _pyNum(id) { const m = String(id).match(/(\d+)\s*$/); return m ? parseInt(m[1], 10) : 0; }
+function _nextIds(count, taken) {
+  const used = new Set([...pokaYokes.map(p => p.id), ...(taken || [])]);
+  let n = Math.max(0, ...pokaYokes.map(p => _pyNum(p.id)));
+  const out = [];
+  while (out.length < count) { n++; const id = 'PY-' + String(n).padStart(3, '0'); if (!used.has(id)) { out.push(id); used.add(id); } }
+  return out;
+}
+// Incrementa o último número de um código: EST-A04 → EST-A05 (preserva zeros à esquerda)
+function _incCode(code, step) {
+  const m = String(code || '').match(/^(.*?)(\d+)(\D*)$/);
+  if (!m) return code ? code + '-' + (step + 1) : '';
+  const num = String(parseInt(m[2], 10) + step);
+  return m[1] + num.padStart(m[2].length, '0') + m[3];
+}
+function _addDays(iso, d) { const [y, m, dd] = iso.split('-').map(Number); const x = new Date(y, m - 1, dd); x.setDate(x.getDate() + d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }
+
+window.openDuplicateSelected = function() {
+  const ids = Array.from(selectedForPrint);
+  if (!ids.length) { showToast('Selecione pelo menos um dispositivo.', 'info'); return; }
+  window.openDuplicateModal(ids);
+};
+
+window.openDuplicateModal = function(ids) {
+  _dupSources = (ids || []).map(id => pokaYokes.find(p => p.id === id)).filter(Boolean);
+  if (!_dupSources.length) return;
+  document.getElementById('dupCopies').value = 1;
+  document.getElementById('dupEstMode').value = _dupSources.length === 1 ? 'inc' : 'same';
+  document.getElementById('dupNameMode').value = 'same';
+  document.getElementById('dupDateMode').value = 'keep';
+  window.closeDetail();
+  window.dupRegenerate();
+  document.getElementById('dupOverlay').classList.remove('hidden');
+  lucide.createIcons();
+};
+
+window.closeDuplicateModal = function() {
+  document.getElementById('dupOverlay').classList.add('hidden');
+  _dupSources = []; _dupRows = [];
+};
+
+window.dupRegenerate = function() {
+  const copies = clampN(parseInt(document.getElementById('dupCopies').value) || 1, 1, 50);
+  const estMode = document.getElementById('dupEstMode').value;
+  const nameMode = document.getElementById('dupNameMode').value;
+  const total = _dupSources.length * copies;
+  const ids = _nextIds(total);
+  _dupRows = [];
+  let k = 0;
+  _dupSources.forEach(src => {
+    for (let c = 0; c < copies; c++) {
+      _dupRows.push({
+        src: src.id, id: ids[k++],
+        nome: nameMode === 'copy' ? src.nome + ' (cópia)' : src.nome,
+        linha: src.linha,
+        estacao: estMode === 'blank' ? '' : estMode === 'inc' ? _incCode(src.estacao, c + 1) : src.estacao,
+        tipo: src.tipo, status: src.status,
+        partNumber: src.partNumber || '', partName: src.partName || '',
+        instrucaoTrabalho: src.instrucaoTrabalho || '', responsavel: src.responsavel || ''
+      });
+    }
+  });
+  _dupRender();
+};
+
+function _dupRender() {
+  const linhaOpts = (sel) => {
+    const list = linhas.map(l => l.codigo);
+    if (sel && !list.includes(sel)) list.unshift(sel);
+    return list.map(c => `<option value="${escapeHtml(c)}" ${c === sel ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  };
+  const opt = (arr, sel) => arr.map(v => `<option ${v === sel ? 'selected' : ''}>${v}</option>`).join('');
+  const inp = (i, f, v, extra = '') => `<input class="input" style="padding:6px 8px;font-size:12px;${extra}" data-i="${i}" data-f="${f}" value="${escapeHtml(v)}">`;
+  document.getElementById('dupBody').innerHTML = _dupRows.map((r, i) => `<tr class="border-b border-[var(--border)]">
+    <td class="px-2 py-1.5 font-mono text-[11px] text-[var(--fg-dim)] whitespace-nowrap">${escapeHtml(r.src)}</td>
+    <td class="px-2 py-1.5" style="min-width:92px">${inp(i, 'id', r.id, "font-family:'JetBrains Mono',monospace;font-weight:700")}</td>
+    <td class="px-2 py-1.5" style="min-width:220px">${inp(i, 'nome', r.nome)}</td>
+    <td class="px-2 py-1.5" style="min-width:110px"><select class="input" style="padding:6px 28px 6px 8px;font-size:12px" data-i="${i}" data-f="linha">${linhaOpts(r.linha)}</select></td>
+    <td class="px-2 py-1.5" style="min-width:100px">${inp(i, 'estacao', r.estacao, "font-family:'JetBrains Mono',monospace")}</td>
+    <td class="px-2 py-1.5" style="min-width:110px"><select class="input" style="padding:6px 28px 6px 8px;font-size:12px" data-i="${i}" data-f="tipo">${opt(Object.keys(TIPOS_COLORS), r.tipo)}</select></td>
+    <td class="px-2 py-1.5" style="min-width:110px"><select class="input" style="padding:6px 28px 6px 8px;font-size:12px" data-i="${i}" data-f="status">${opt(Object.keys(STATUS_CONFIG), r.status)}</select></td>
+    <td class="px-2 py-1.5" style="min-width:110px">${inp(i, 'partNumber', r.partNumber)}</td>
+    <td class="px-2 py-1.5" style="min-width:130px">${inp(i, 'partName', r.partName)}</td>
+    <td class="px-2 py-1.5" style="min-width:90px">${inp(i, 'instrucaoTrabalho', r.instrucaoTrabalho)}</td>
+    <td class="px-2 py-1.5" style="min-width:120px">${inp(i, 'responsavel', r.responsavel)}</td>
+    <td class="px-2 py-1.5"><button type="button" class="icon-btn danger !w-7 !h-7" title="Remover esta cópia" onclick="window.dupRemoveRow(${i})"><i data-lucide="x" style="width:12px;height:12px"></i></button></td></tr>`).join('');
+  document.getElementById('dupSubtitle').textContent = `${_dupSources.length} origem(ns) → ${_dupRows.length} nova(s) cópia(s)`;
+  document.getElementById('dupSaveLabel').textContent = _dupRows.length === 1 ? 'Criar 1 cópia' : `Criar ${_dupRows.length} cópias`;
+  document.getElementById('dupError').classList.add('hidden');
+  lucide.createIcons();
+}
+
+window.dupRemoveRow = function(i) { _dupRows.splice(i, 1); _dupRender(); };
+
+// edições na tabela atualizam o estado (sem re-render para não perder o foco)
+document.getElementById('dupBody').addEventListener('input', e => {
+  const t = e.target, i = t.dataset.i, f = t.dataset.f;
+  if (i === undefined || !_dupRows[i]) return;
+  _dupRows[i][f] = f === 'id' ? t.value.trim().toUpperCase() : t.value;
+});
+document.getElementById('dupBody').addEventListener('change', e => {
+  const t = e.target, i = t.dataset.i, f = t.dataset.f;
+  if (i === undefined || !_dupRows[i]) return;
+  _dupRows[i][f] = t.value;
+});
+
+window.saveDuplicates = async function() {
+  const err = document.getElementById('dupError');
+  const fail = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+  if (!_dupRows.length) return fail('Nenhuma cópia para criar.');
+  const seen = new Set(), existing = new Set(pokaYokes.map(p => p.id));
+  for (let i = 0; i < _dupRows.length; i++) {
+    const r = _dupRows[i], n = i + 1;
+    if (!r.id) return fail(`Linha ${n}: ID obrigatório.`);
+    if (/[\/\s]/.test(r.id)) return fail(`Linha ${n}: ID não pode ter espaços ou “/”.`);
+    if (existing.has(r.id)) return fail(`Linha ${n}: o ID ${r.id} já existe.`);
+    if (seen.has(r.id)) return fail(`Linha ${n}: ID ${r.id} repetido nesta lista.`);
+    seen.add(r.id);
+    if (!String(r.nome).trim()) return fail(`Linha ${n} (${r.id}): nome obrigatório.`);
+    if (!r.linha) return fail(`Linha ${n} (${r.id}): selecione a linha.`);
+    if (!String(r.estacao).trim()) return fail(`Linha ${n} (${r.id}): estação obrigatória.`);
+  }
+  const btn = document.getElementById('dupSaveBtn');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  const dateMode = document.getElementById('dupDateMode').value;
+  const today = new Date().toISOString().split('T')[0];
+  const user = getCurrentUserId();
+  const docs = _dupRows.map(r => {
+    const src = pokaYokes.find(p => p.id === r.src) || {};
+    const ultima = dateMode === 'today' ? today : (src.ultimaVerificacao || today);
+    const proxima = dateMode === 'today' ? _addDays(today, 365) : (src.proximaVerificacao || _addDays(ultima, 365));
+    const ef = typeof src.eficiencia === 'number' ? src.eficiencia : 95;
+    return {
+      id: r.id, nome: r.nome.trim(), linha: r.linha, estacao: r.estacao.trim().toUpperCase(),
+      tipo: r.tipo, status: r.status, responsavel: r.responsavel.trim(),
+      partNumber: r.partNumber.trim(), partName: r.partName.trim(), instrucaoTrabalho: r.instrucaoTrabalho.trim(),
+      eficiencia: ef, ultimaVerificacao: ultima, proximaVerificacao: proxima,
+      descricao: src.descricao || '', matrizDecisao: src.matrizDecisao || '',
+      historico: [{ data: today, evento: `Dispositivo duplicado de ${r.src}`, usuario: 'Operador', eficiencia: ef }]
+    };
+  });
+  try {
+    if (isFirebaseConnected) {
+      // confere no servidor se algum ID já existe (evita sobrescrever)
+      const snaps = await Promise.all(docs.map(d => getDoc(doc(db, 'pokaYokes', d.id))));
+      const clash = snaps.findIndex(s => s.exists);
+      if (clash >= 0) { fail(`O ID ${docs[clash].id} já existe no banco. Altere e tente novamente.`); return; }
+      for (let i = 0; i < docs.length; i += 400) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + 400).forEach(d => batch.set(doc(db, 'pokaYokes', d.id), { ...d, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: user }));
+        await batch.commit();
+      }
+    } else {
+      docs.forEach(d => pokaYokes.push(d));
+      renderAll();
+    }
+    showToast(`${docs.length} poka-yoke(s) criado(s)`, 'success');
+    selectedForPrint.clear();
+    document.getElementById('printCount').textContent = 0;
+    document.getElementById('printSelectedBtn').style.display = 'none';
+    document.getElementById('dupSelectedBtn').style.display = 'none';
+    document.getElementById('selectAll').checked = false;
+    window.closeDuplicateModal();
+    renderPokaYokes();
+  } catch (e) {
+    console.error('❌ Erro ao duplicar:', e);
+    fail('Erro ao salvar: ' + (e.message || e));
+  } finally {
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+};
+
+// ============================================================
 // QR CODE FROM URL
 // ============================================================
 function checkUrlParam() {
@@ -3100,6 +3318,9 @@ const __realFns = {
   renderPokaYokes: renderPokaYokes,
   openCalibracaoDetail: function(id) { if (typeof window.openDetail === 'function') window.openDetail(id); },
   setViewMode: window.setViewMode,
+  openDuplicateModal: window.openDuplicateModal, openDuplicateSelected: window.openDuplicateSelected,
+  closeDuplicateModal: window.closeDuplicateModal, dupRegenerate: window.dupRegenerate,
+  saveDuplicates: window.saveDuplicates, dupRemoveRow: window.dupRemoveRow,
 };
 Object.keys(__realFns).forEach(name => {
   if (typeof __realFns[name] === 'function') {
