@@ -553,9 +553,19 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           <h1 class="font-display font-bold text-3xl lg:text-4xl">Linhas de Produção</h1>
           <p class="text-sm text-[var(--fg-muted)] mt-1">Gerencie as linhas de produção</p>
         </div>
-        <button class="btn-accent px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="window.openLinhaModal()">
-          <i data-lucide="plus" style="width:16px;height:16px"></i>Nova Linha
-        </button>
+        <div class="flex items-center gap-2">
+          <div class="flex gap-2">
+            <button id="btnLinhasGrid" class="btn-ghost px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1" onclick="window.setLinhasViewMode('grid')" title="Visualização em Grade">
+              <i data-lucide="layout-grid" style="width:16px;height:16px"></i><span class="hidden sm:inline">Grade</span>
+            </button>
+            <button id="btnLinhasList" class="btn-ghost px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1" onclick="window.setLinhasViewMode('list')" title="Visualização em Lista">
+              <i data-lucide="list" style="width:16px;height:16px"></i><span class="hidden sm:inline">Lista</span>
+            </button>
+          </div>
+          <button class="btn-accent px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="window.openLinhaModal()">
+            <i data-lucide="plus" style="width:16px;height:16px"></i>Nova Linha
+          </button>
+        </div>
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(168,85,247,0.12)] flex items-center justify-center"><i data-lucide="factory" class="text-[var(--purple)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Linhas</div><div class="font-display font-bold text-3xl" id="linhasTotal">0</div></div>
@@ -563,7 +573,52 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Média de Dispositivos</div><div class="font-display font-bold text-3xl" id="linhasMediaDispositivos">0</div></div>
         <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="shield-check" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="linhasDispositivosAtivos">0</div></div>
       </div>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label>🔍 Busca</label>
+          <input id="lnSearch" type="text" placeholder="Código, nome, descrição..." style="min-width:180px;" onkeydown="if(event.key==='Enter'){window.applyLinhasFilters()}">
+        </div>
+        <div class="filter-group">
+          <label>🏭 Dispositivos</label>
+          <select id="lnFilterDispositivos"><option value="">Todas</option><option value="com">Com dispositivos</option><option value="sem">Sem dispositivos</option></select>
+        </div>
+        <div class="filter-group">
+          <label>🛠️ Manutenção</label>
+          <select id="lnFilterManutencao"><option value="">Todas</option><option value="com">Com itens em manutenção</option><option value="sem">Sem itens em manutenção</option></select>
+        </div>
+        <div class="filter-group">
+          <label>📊 Eficiência</label>
+          <select id="lnFilterEficiencia"><option value="">Todas</option><option value="alta">Alta (&gt; 95%)</option><option value="media">Média (85–95%)</option><option value="baixa">Baixa (&lt; 85%)</option></select>
+        </div>
+        <div class="filter-actions">
+          <button class="btn-apply" onclick="window.applyLinhasFilters()">Aplicar</button>
+          <button class="btn-clear" onclick="window.clearLinhasFilters()">Limpar</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-sm text-[var(--fg-muted)]"><span id="linhasResultsCount" class="font-bold text-[var(--fg)]">0</span> <span id="linhasResultsLabel">linhas</span></span>
+      </div>
       <div id="linhasGrid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      <div id="linhasList" class="card overflow-hidden hidden">
+        <div class="overflow-x-auto scrollbar">
+          <table class="w-full text-sm">
+            <thead class="text-left text-[11px] uppercase tracking-wider text-[var(--fg-dim)] border-b border-[var(--border)]">
+              <tr>
+                <th class="px-4 py-3">Código</th><th class="px-4 py-3">Nome</th><th class="px-4 py-3 hidden md:table-cell">Descrição</th>
+                <th class="px-4 py-3 text-center">Total</th><th class="px-4 py-3 text-center">Ativos</th><th class="px-4 py-3 text-center">Manut.</th>
+                <th class="px-4 py-3">Eficiência</th><th class="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="linhasListBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="linhasNoResults" class="card p-12 text-center hidden">
+        <div class="w-16 h-16 rounded-full bg-[var(--bg-3)] flex items-center justify-center mx-auto mb-4"><i data-lucide="search-x" class="text-[var(--fg-dim)]" style="width:28px;height:28px"></i></div>
+        <h3 class="font-display font-bold text-xl mb-1">Nenhuma linha encontrada</h3>
+        <p class="text-[var(--fg-muted)] text-sm mb-5">Nenhuma linha corresponde aos filtros aplicados.</p>
+        <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold" onclick="window.clearLinhasFilters()">Limpar filtros</button>
+      </div>
       <div id="linhasEmptyState" class="card p-12 text-center hidden">
         <div class="w-16 h-16 rounded-full bg-[var(--bg-3)] flex items-center justify-center mx-auto mb-4"><i data-lucide="factory" class="text-[var(--fg-dim)]" style="width:28px;height:28px"></i></div>
         <h3 class="font-display font-bold text-xl mb-1">Nenhuma linha cadastrada</h3>
@@ -1099,6 +1154,9 @@ let viewMode = 'grid';
 let editingId = null;
 let deletingId = null;
 let editingLinhaId = null;
+let linhasViewMode = 'grid';
+let linhasFilters = { search: '', dispositivos: '', manutencao: '', eficiencia: '' };
+try { const sv = localStorage.getItem('linhasViewMode'); if (sv === 'grid' || sv === 'list') linhasViewMode = sv; } catch (e) {}
 let deletingLinhaId = null;
 let currentFilters = { search: '', linha: '', tipo: '', status: '', vencimento: '' };
 let sortField = 'id';
@@ -1160,6 +1218,14 @@ function setQRImage(imgElement, p, size) {
       imgElement.style.height = size + 'px';
     }
   });
+}
+
+function normalizeCodigo(c) { return String(c || '').trim().toUpperCase(); }
+// Retorna a linha que já usa o código (ignorando a que está sendo editada)
+function findLinhaDuplicada(codigo, ignoreId) {
+  const cod = normalizeCodigo(codigo);
+  if (!cod) return null;
+  return linhas.find(l => normalizeCodigo(l.codigo) === cod && (l.firebaseId || l.codigo) !== ignoreId) || null;
 }
 
 function getLinhaNome(codigo) { const l = linhas.find(x => x.codigo === codigo); return l ? `${l.codigo} - ${l.nome}` : codigo; }
@@ -1381,6 +1447,7 @@ async function deletePokaYoke(id) {
 }
 
 async function createLinha(data) {
+  if (findLinhaDuplicada(data.codigo, null)) throw new Error('Código de linha duplicado: ' + data.codigo);
   try {
     const docRef = await addDoc(collection(db, 'linhas'), {
       ...data,
@@ -1690,15 +1757,38 @@ function renderLinhas() {
   document.getElementById('linhasMediaDispositivos').textContent = media.toFixed(1);
   document.getElementById('linhasDispositivosAtivos').textContent = pokaYokes.filter(p => p.status === 'Ativo').length;
   
+  updateLinhasViewButtons();
   if (linhas.length === 0) {
     document.getElementById('linhasGrid').classList.add('hidden');
+    document.getElementById('linhasList').classList.add('hidden');
+    document.getElementById('linhasNoResults').classList.add('hidden');
+    document.getElementById('linhasResultsCount').textContent = 0;
     document.getElementById('linhasEmptyState').classList.remove('hidden');
     return;
   }
-  document.getElementById('linhasGrid').classList.remove('hidden');
+  const linhasFiltradas = getLinhasFiltradas();
+  document.getElementById('linhasResultsCount').textContent = linhasFiltradas.length;
+  document.getElementById('linhasResultsLabel').textContent = linhasFiltradas.length === 1 ? 'linha' : 'linhas';
   document.getElementById('linhasEmptyState').classList.add('hidden');
+  const semResultados = linhasFiltradas.length === 0;
+  document.getElementById('linhasNoResults').classList.toggle('hidden', !semResultados);
+  document.getElementById('linhasGrid').classList.toggle('hidden', semResultados || linhasViewMode !== 'grid');
+  document.getElementById('linhasList').classList.toggle('hidden', semResultados || linhasViewMode !== 'list');
+
+  // Visualização em lista
+  document.getElementById('linhasListBody').innerHTML = linhasFiltradas.map(linha => {
+    const it = pokaYokes.filter(p => p.linha === linha.codigo);
+    const a = it.filter(p => p.status === 'Ativo').length;
+    const m = it.filter(p => p.status === 'Manutenção').length;
+    const val = it.filter(p => p.status !== 'Inativo');
+    const ef = val.reduce((s, p) => s + (p.eficiencia || 0), 0) / (val.length || 1);
+    const c = ef > 95 ? '#22c55e' : ef > 85 ? '#f59e0b' : '#ef4444';
+    const cor = linha.cor || '#888780';
+    const id = linha.firebaseId || linha.codigo;
+    return `<tr class="border-b border-[var(--border)] hover:bg-[var(--bg-3)] transition"><td class="px-4 py-3"><div class="flex items-center gap-2"><span class="w-1.5 h-8 rounded-full flex-shrink-0" style="background:${cor}"></span><span class="font-mono text-xs font-bold text-[var(--accent-bright)]">${escapeHtml(linha.codigo)}</span></div></td><td class="px-4 py-3 font-semibold">${escapeHtml(linha.nome)}</td><td class="px-4 py-3 text-[var(--fg-muted)] hidden md:table-cell max-w-xs truncate">${escapeHtml(linha.descricao || '—')}</td><td class="px-4 py-3 text-center font-mono font-bold">${it.length}</td><td class="px-4 py-3 text-center font-mono font-bold text-[var(--green)]">${a}</td><td class="px-4 py-3 text-center font-mono font-bold text-[var(--amber)]">${m}</td><td class="px-4 py-3"><div class="flex items-center gap-2 min-w-[110px]"><div class="flex-1 h-1.5 rounded-full bg-[var(--bg-3)] overflow-hidden"><div class="h-full rounded-full" style="width:${Math.min(ef,100)}%;background:${c}"></div></div><span class="font-mono text-xs font-bold" style="color:${c}">${ef.toFixed(0)}%</span></div></td><td class="px-4 py-3"><div class="flex justify-end gap-2"><button class="btn-ghost px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1" onclick="window.openEditarLinha('${id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i><span class="hidden lg:inline">Editar</span></button><button class="btn-danger px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1" onclick="window.openDeleteLinhaModal('${id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i><span class="hidden lg:inline">Excluir</span></button></div></td></tr>`;
+  }).join('');
   
-  document.getElementById('linhasGrid').innerHTML = linhas.map(linha => {
+  document.getElementById('linhasGrid').innerHTML = linhasFiltradas.map(linha => {
     const it = pokaYokes.filter(p => p.linha === linha.codigo);
     const a = it.filter(p => p.status === 'Ativo').length;
     const m = it.filter(p => p.status === 'Manutenção').length;
@@ -2761,6 +2851,62 @@ setInterval(function() {
   if ((want === 'light') !== isLight) applyTheme(want, true);
 }, 60000);
 
+function getLinhasFiltradas() {
+  const f = linhasFilters;
+  const q = f.search.trim().toLowerCase();
+  return linhas.filter(l => {
+    const it = pokaYokes.filter(p => p.linha === l.codigo);
+    if (q && !`${l.codigo} ${l.nome} ${l.descricao || ''}`.toLowerCase().includes(q)) return false;
+    if (f.dispositivos === 'com' && it.length === 0) return false;
+    if (f.dispositivos === 'sem' && it.length > 0) return false;
+    const m = it.filter(p => p.status === 'Manutenção').length;
+    if (f.manutencao === 'com' && m === 0) return false;
+    if (f.manutencao === 'sem' && m > 0) return false;
+    if (f.eficiencia) {
+      const val = it.filter(p => p.status !== 'Inativo');
+      if (val.length === 0) return false; // sem dados de eficiência
+      const ef = val.reduce((a, p) => a + (p.eficiencia || 0), 0) / val.length;
+      if (f.eficiencia === 'alta' && !(ef > 95)) return false;
+      if (f.eficiencia === 'media' && !(ef > 85 && ef <= 95)) return false;
+      if (f.eficiencia === 'baixa' && !(ef <= 85)) return false;
+    }
+    return true;
+  });
+}
+
+window.applyLinhasFilters = function() {
+  linhasFilters = {
+    search: document.getElementById('lnSearch').value,
+    dispositivos: document.getElementById('lnFilterDispositivos').value,
+    manutencao: document.getElementById('lnFilterManutencao').value,
+    eficiencia: document.getElementById('lnFilterEficiencia').value
+  };
+  renderLinhas();
+};
+
+window.clearLinhasFilters = function() {
+  ['lnSearch', 'lnFilterDispositivos', 'lnFilterManutencao', 'lnFilterEficiencia'].forEach(id => { document.getElementById(id).value = ''; });
+  linhasFilters = { search: '', dispositivos: '', manutencao: '', eficiencia: '' };
+  renderLinhas();
+};
+
+function updateLinhasViewButtons() {
+  [['btnLinhasGrid', 'grid'], ['btnLinhasList', 'list']].forEach(([id, m]) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    const on = linhasViewMode === m;
+    b.style.background = on ? 'rgba(255,107,26,0.12)' : '';
+    b.style.borderColor = on ? 'rgba(255,107,26,0.4)' : '';
+    b.style.color = on ? 'var(--accent-bright)' : '';
+  });
+}
+
+window.setLinhasViewMode = function(mode) {
+  linhasViewMode = mode === 'list' ? 'list' : 'grid';
+  try { localStorage.setItem('linhasViewMode', linhasViewMode); } catch (e) {}
+  renderLinhas();
+};
+
 window.setViewMode = function(mode) {
   viewMode = mode;
   window.viewMode = mode;
@@ -2781,7 +2927,29 @@ window.setViewMode = function(mode) {
 // MODAL FUNCTIONS - LINHAS (Production Lines)
 // ============================================================
 
+function showLinhaCodigoErro(msg) {
+  const inp = document.getElementById('fLinhaCodigo');
+  let el = document.getElementById('fLinhaCodigoErro');
+  if (!el) {
+    el = document.createElement('p');
+    el.id = 'fLinhaCodigoErro';
+    el.className = 'text-xs mt-1.5 font-semibold';
+    el.style.color = 'var(--red)';
+    inp.parentNode.appendChild(el);
+  }
+  el.textContent = '⚠️ ' + msg;
+  inp.style.borderColor = 'var(--red)';
+  inp.focus();
+}
+function clearLinhaCodigoErro() {
+  const el = document.getElementById('fLinhaCodigoErro');
+  if (el) el.remove();
+  const inp = document.getElementById('fLinhaCodigo');
+  if (inp) inp.style.borderColor = '';
+}
+
 window.openLinhaModal = function(id) {
+  clearLinhaCodigoErro();
   editingLinhaId = id || null;
   const form = document.getElementById('linhaForm');
   const overlay = document.getElementById('linhaModalOverlay');
@@ -2818,6 +2986,7 @@ window.openLinhaModal = function(id) {
 };
 
 window.closeLinhaModal = function() {
+  clearLinhaCodigoErro();
   document.getElementById('linhaModalOverlay').classList.add('hidden');
   document.getElementById('linhaForm').reset();
   editingLinhaId = null;
@@ -2832,6 +3001,7 @@ window.openEditarLinha = function(id) {
 // ============================================================
 
 async function createLinha(data) {
+  if (findLinhaDuplicada(data.codigo, null)) throw new Error('Código de linha duplicado: ' + data.codigo);
   try {
     if (isFirebaseConnected) {
       const newDoc = await addDoc(collection(db, 'linhas'), {
@@ -2925,7 +3095,27 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
+      // Bloqueia código já existente
+      if (findLinhaDuplicada(data.codigo, editingLinhaId)) {
+        showLinhaCodigoErro(`O código ${data.codigo} já existe. Use outro código.`);
+        showToast(`Já existe uma linha com o código ${data.codigo}`, 'error');
+        return;
+      }
+      
+      const btnSubmit = linhaForm.querySelector('button[type="submit"]');
+      if (btnSubmit) btnSubmit.disabled = true;
       try {
+        // Confere também direto no Firestore (evita duplicar se a lista local estiver desatualizada)
+        try {
+          const snap = await getDocs(query(collection(db, 'linhas'), where('codigo', '==', data.codigo)));
+          const dupRemota = snap.docs.some(d => d.id !== editingLinhaId);
+          if (dupRemota) {
+            showLinhaCodigoErro(`O código ${data.codigo} já existe. Use outro código.`);
+            showToast(`Já existe uma linha com o código ${data.codigo}`, 'error');
+            return;
+          }
+        } catch (errChk) { console.warn('⚠️ Verificação remota de código indisponível:', errChk); }
+        
         if (editingLinhaId) {
           await updateLinha(editingLinhaId, data);
           showToast(`${data.codigo} atualizada com sucesso`, 'success');
@@ -2937,7 +3127,17 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch (error) {
         console.error('Erro:', error);
         showToast('Erro ao salvar linha', 'error');
+      } finally {
+        if (btnSubmit) btnSubmit.disabled = false;
       }
+    });
+    
+    // Validação em tempo real enquanto digita
+    const inpCod = document.getElementById('fLinhaCodigo');
+    if (inpCod) inpCod.addEventListener('input', () => {
+      const dup = findLinhaDuplicada(inpCod.value, editingLinhaId);
+      if (dup) showLinhaCodigoErro(`O código ${normalizeCodigo(inpCod.value)} já existe (${dup.nome}).`);
+      else clearLinhaCodigoErro();
     });
   }
 });
