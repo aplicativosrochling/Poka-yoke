@@ -100,6 +100,26 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   .toast.info { border-left: 3px solid var(--cyan); }
   @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
   .kpi-card { position: relative; overflow: hidden; }
+  .vc-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .vc-grid{display:grid;grid-template-columns:260px repeat(var(--vc-cols),1fr);}
+  .vc-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-dim);padding:8px 4px;text-align:center;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:6px 6px 0 0}
+  .vc-head:hover{background:var(--bg-3);color:var(--fg)}
+  .vc-head.sel{background:rgba(255,107,26,0.15);color:var(--accent-bright)}
+  .vc-head.now{color:var(--accent-bright)}
+  .vc-head .vc-cnt{display:block;font-family:monospace;font-size:11px;margin-top:2px;color:var(--fg-muted)}
+  .vc-row{display:contents}
+  .vc-label{padding:9px 8px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .vc-label:hover{color:var(--accent-bright)}
+  .vc-track{grid-column:2/-1;position:relative;border-bottom:1px solid var(--border);min-height:38px;background-image:linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:calc(100%/var(--vc-cols)) 100%}
+  .vc-bar{position:absolute;top:50%;height:4px;transform:translateY(-50%);border-radius:4px;opacity:.55}
+  .vc-mk{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid var(--bg-1);cursor:pointer;transition:transform .15s;box-shadow:0 0 0 3px rgba(0,0,0,.15)}
+  .vc-mk:hover{transform:translate(-50%,-50%) scale(1.35);z-index:3}
+  .vc-mk.venc{animation:vcPulse 1.6s infinite}
+  @keyframes vcPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+  .vc-today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:2;pointer-events:none}
+  .vc-today-tag{position:absolute;top:-2px;transform:translateX(-50%);font-size:9px;font-weight:800;background:var(--accent);color:#fff;padding:1px 5px;border-radius:4px;z-index:4;pointer-events:none}
+  .kpi-card.cursor-pointer:hover{transform:translateY(-2px);transition:transform .15s}
+
   .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.4; }
   .range-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: var(--bg-3); border-radius: 3px; outline: none; }
   .range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 3px solid #0a0d12; box-shadow: 0 0 0 1px var(--accent), 0 0 12px rgba(255,107,26,0.5); }
@@ -410,6 +430,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 <aside id="sidebar" class="sidebar fixed left-0 top-16 bottom-0 w-[260px] glass border-r border-[var(--border)] p-4 overflow-y-auto scrollbar z-30">
   <div class="text-[10px] font-bold text-[var(--fg-dim)] tracking-[0.15em] uppercase px-2 mb-2">Principal</div>
   <nav class="space-y-1 mb-6">
+    <div class="nav-item" data-view="calibracao"><i data-lucide="calendar-check"></i><span>Verificação</span><span class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(239,68,68,0.15);color:#f87171" id="sidebarVencidas">0</span></div>
     <div class="nav-item active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></div>
     <div class="nav-item" data-view="pokayokes"><i data-lucide="shield-check"></i><span>Poka-Yokes</span><span class="ml-auto text-[10px] font-mono bg-[var(--bg-3)] px-1.5 py-0.5 rounded" id="sidebarCount">0</span></div>
     <div class="nav-item" data-view="linhas"><i data-lucide="factory"></i><span>Linhas de Produção</span></div>
@@ -418,7 +439,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   <div class="text-[10px] font-bold text-[var(--fg-dim)] tracking-[0.15em] uppercase px-2 mb-2">Operação</div>
   <nav class="space-y-1 mb-6">
     <div class="nav-item" data-view="manutencao"><i data-lucide="wrench"></i><span>Manutenção</span><span class="ml-auto w-2 h-2 rounded-full bg-[var(--amber)]"></span></div>
-    <div class="nav-item" data-view="calibracao"><i data-lucide="gauge"></i><span>Calibração</span></div>
     <div class="nav-item" data-view="auditoria"><i data-lucide="clipboard-list"></i><span>Auditoria</span></div>
   </nav>
   <div class="card p-4 mt-4 relative overflow-hidden">
@@ -447,20 +467,22 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           <button class="btn-accent px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" onclick="window.openModal()"><i data-lucide="plus" style="width:16px;height:16px"></i>Novo Poka-Yoke</button>
         </div>
       </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('Vencida')" title="Ver verificações vencidas" style="border-color:rgba(239,68,68,0.35)"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(239,68,68,0.12)"><i data-lucide="alarm-clock-off" style="width:20px;height:20px;color:#ef4444"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Verificações Vencidas</div><div class="font-display font-bold text-3xl" style="color:#f87171" id="dashKpiVencidas">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1" id="dashKpiVencidasSub">—</div></div>
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('pokayokes')" title="Ver todos os poka-yokes"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(255,107,26,0.12)] flex items-center justify-center"><i data-lucide="shield-check" class="text-[var(--accent-bright)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Poka-Yokes</div><div class="font-display font-bold text-3xl" id="kpiTotal">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-2">Em <span id="kpiLinhasCount">0</span> linhas</div></div>
-        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('pokayokes');setTimeout(()=>{window.currentFilters&&(window.currentFilters.status='Ativo');window.renderPokaYokes&&window.renderPokaYokes();},200)" title="Ver dispositivos ativos"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--green)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="kpiAtivos">0</div><div class="stat-bar mt-3"><div class="stat-bar-fill" id="kpiAtivosBar" style="width:0%;background:linear-gradient(90deg,var(--green),#4ade80)"></div></div></div>
-        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('manutencao')" title="Ver manutenções"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="wrench" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Manutenção</div><div class="font-display font-bold text-3xl" id="kpiManut">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-2">Tempo médio: 2.4h</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.goPk({status:'Ativo'})" title="Ver dispositivos ativos"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--green)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="kpiAtivos">0</div><div class="stat-bar mt-3"><div class="stat-bar-fill" id="kpiAtivosBar" style="width:0%;background:linear-gradient(90deg,var(--green),#4ade80)"></div></div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.goPk({status:'Manutenção'})" title="Ver dispositivos em manutenção"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="wrench" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Manutenção</div><div class="font-display font-bold text-3xl" id="kpiManut">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-2">Tempo médio: 2.4h</div></div>
         <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="target" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Eficiência Média</div><div class="font-display font-bold text-3xl" id="kpiEficiencia">0%</div></div>
       </div>
+      <div class="card p-5 mb-6"><div class="flex items-center justify-between mb-4"><div><h3 class="font-display font-bold text-lg flex items-center gap-2"><span class="vc-dot" style="background:#ef4444"></span>Vencidos por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Vencidas vs a vencer em 30 dias • clique em uma barra</p></div><button class="btn-ghost px-3 py-1.5 rounded-lg text-xs font-semibold" onclick="window.verifFilter('Vencida')">Ver cronograma</button></div><div style="height:220px"><canvas id="chartVencidos" style="cursor:pointer"></canvas></div></div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Eficiência Média por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Valor atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas"></canvas></div></div>
-        <div class="card p-5 cursor-pointer" onclick="window.switchView('pokayokes')" title="Ver poka-yokes por tipo"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Distribuição por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Categorização atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:220px"><canvas id="chartTipos"></canvas></div><div class="mt-4 space-y-2" id="chartTiposLegend"></div></div>
+        <div class="card p-5 lg:col-span-2 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatórios"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Eficiência Média por Linha</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Valor atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:280px"><canvas id="chartLinhas" style="cursor:pointer"></canvas></div></div>
+        <div class="card p-5 cursor-pointer" onclick="window.switchView('pokayokes')" title="Ver poka-yokes por tipo"><div class="flex items-center justify-between mb-5"><div><h3 class="font-display font-bold text-lg">Distribuição por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Categorização atual</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div style="height:220px"><canvas id="chartTipos" style="cursor:pointer"></canvas></div><div class="mt-4 space-y-2" id="chartTiposLegend"></div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="card p-5 cursor-pointer" onclick="window.switchView('relatorios')" title="Ver relatório de eficiência"><div class="flex items-center justify-between mb-1"><h3 class="font-display font-bold text-lg">Eficiência Operacional</h3><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><p class="text-xs text-[var(--fg-muted)] mb-4">Por linha</p><div class="space-y-3" id="eficienciaList"></div></div>
         <div class="card p-5 cursor-pointer" onclick="window.switchView('auditoria')" title="Ver auditoria"><div class="flex items-center justify-between mb-4"><div><h3 class="font-display font-bold text-lg">Atividade Recente</h3><p class="text-xs text-[var(--fg-muted)]">Últimas atualizações</p></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><div class="space-y-3 max-h-[300px] overflow-y-auto scrollbar pr-2" id="atividadeRecente"></div></div>
-        <div class="card p-5 cursor-pointer" onclick="window.switchView('calibracao')" title="Ver calibrações"><div class="flex items-center justify-between mb-1"><h3 class="font-display font-bold text-lg">Calibrações a Vencer</h3><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><p class="text-xs text-[var(--fg-muted)] mb-4">Próximos 30 dias</p><div class="space-y-2 max-h-[300px] overflow-y-auto scrollbar pr-2" id="calibracoesList"></div></div>
+        <div class="card p-5 cursor-pointer" onclick="window.switchView('calibracao')" title="Ver verificações"><div class="flex items-center justify-between mb-1"><h3 class="font-display font-bold text-lg">Verificações a Vencer</h3><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:18px;height:18px"></i></div><p class="text-xs text-[var(--fg-muted)] mb-4">Próximos 30 dias</p><div class="space-y-2 max-h-[300px] overflow-y-auto scrollbar pr-2" id="calibracoesList"></div></div>
       </div>
     </section>
     
@@ -568,10 +590,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         </div>
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(168,85,247,0.12)] flex items-center justify-center"><i data-lucide="factory" class="text-[var(--purple)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Linhas</div><div class="font-display font-bold text-3xl" id="linhasTotal">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="check-circle" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Linhas com Dispositivos</div><div class="font-display font-bold text-3xl" id="linhasComDispositivos">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Média de Dispositivos</div><div class="font-display font-bold text-3xl" id="linhasMediaDispositivos">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="shield-check" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="linhasDispositivosAtivos">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.scrollToEl('view-linhas')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(168,85,247,0.12)] flex items-center justify-center"><i data-lucide="factory" class="text-[var(--purple)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Linhas</div><div class="font-display font-bold text-3xl" id="linhasTotal">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.goPk({})" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="check-circle" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Linhas com Dispositivos</div><div class="font-display font-bold text-3xl" id="linhasComDispositivos">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.goPk({})" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="activity" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Média de Dispositivos</div><div class="font-display font-bold text-3xl" id="linhasMediaDispositivos">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.goPk({status:'Ativo'})" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="shield-check" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Dispositivos Ativos</div><div class="font-display font-bold text-3xl" id="linhasDispositivosAtivos">0</div></div>
       </div>
       <div class="filter-bar">
         <div class="filter-group">
@@ -631,8 +653,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     <section id="view-relatorios" class="view">
       <div class="mb-6"><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Análise Avançada</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Relatórios</h1></div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Tendência de Eficiência</h3><p class="text-xs text-[var(--fg-muted)] mb-4">12 meses</p><div style="height:260px"><canvas id="chartTrend"></canvas></div></div>
-        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Eficiência por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Média ponderada</p><div style="height:260px"><canvas id="chartTipoEf"></canvas></div></div>
+        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Tendência de Eficiência</h3><p class="text-xs text-[var(--fg-muted)] mb-4">12 meses</p><div style="height:260px"><canvas id="chartTrend" style="cursor:pointer"></canvas></div></div>
+        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Eficiência por Tipo</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Média ponderada</p><div style="height:260px"><canvas id="chartTipoEf" style="cursor:pointer"></canvas></div></div>
       </div>
       <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Top 10 Performance</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Ranking por eficiência</p><div id="topPerformers" class="space-y-2"></div></div>
     </section>
@@ -641,10 +663,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     <section id="view-manutencao" class="view">
       <div class="mb-6"><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Operação</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Manutenção</h1></div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="clipboard-list" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">OS Abertas</div><div class="font-display font-bold text-3xl" id="manutAbertas">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(59,130,246,0.12)] flex items-center justify-center"><i data-lucide="loader" class="text-[var(--blue)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Andamento</div><div class="font-display font-bold text-3xl" id="manutAndamento">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="check-circle" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Concluídas (mês)</div><div class="font-display font-bold text-3xl" id="manutConcluidas">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(255,107,26,0.12)] flex items-center justify-center"><i data-lucide="clock" class="text-[var(--accent-bright)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">MTTR Médio</div><div class="font-display font-bold text-3xl" id="manutMttr">—</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('manutFilterStatus','Aberta')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="clipboard-list" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">OS Abertas</div><div class="font-display font-bold text-3xl" id="manutAbertas">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('manutFilterStatus','Em Andamento')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(59,130,246,0.12)] flex items-center justify-center"><i data-lucide="loader" class="text-[var(--blue)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Andamento</div><div class="font-display font-bold text-3xl" id="manutAndamento">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('manutFilterStatus','Concluída')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="check-circle" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Concluídas (mês)</div><div class="font-display font-bold text-3xl" id="manutConcluidas">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('manutFilterStatus','')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(255,107,26,0.12)] flex items-center justify-center"><i data-lucide="clock" class="text-[var(--accent-bright)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">MTTR Médio</div><div class="font-display font-bold text-3xl" id="manutMttr">—</div></div>
       </div>
       <div class="card p-4 mb-5">
         <div class="flex flex-col lg:flex-row gap-3">
@@ -664,10 +686,25 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
     <!-- CALIBRAÇÃO -->
     <section id="view-calibracao" class="view">
-      <div class="mb-6"><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Operação</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Calibração</h1></div>
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6"><div><div class="text-[var(--fg-dim)] text-xs font-semibold uppercase tracking-wider mb-1">Principal • Plano de Verificação</div><h1 class="font-display font-bold text-3xl lg:text-4xl">Verificação</h1></div>
+      <div class="flex items-center gap-2"><button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2" onclick="window.verifExportCSV()"><i data-lucide="download" style="width:15px;height:15px"></i>Exportar cronograma</button></div></div>
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6"><div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('')" title="Filtrar: Total Programado"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(255,107,26,0.12)"><i data-lucide="calendar-range" style="width:20px;height:20px;color:#ff8536"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total Programado</div><div class="font-display font-bold text-3xl" id="verKpiTotal">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1">Dispositivos no plano</div></div><div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('Em Dia')" title="Filtrar: Em Dia"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(34,197,94,0.12)"><i data-lucide="check-circle-2" style="width:20px;height:20px;color:#22c55e"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Em Dia</div><div class="font-display font-bold text-3xl" id="verKpiEmDia">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1">Mais de 30 dias</div></div><div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('Próxima')" title="Filtrar: Próximas (30d)"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(245,158,11,0.12)"><i data-lucide="clock" style="width:20px;height:20px;color:#f59e0b"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Próximas (30d)</div><div class="font-display font-bold text-3xl" id="verKpiProx">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1">Planejar execução</div></div><div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('Vencida')" title="Filtrar: Vencidas"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(239,68,68,0.12)"><i data-lucide="alert-triangle" style="width:20px;height:20px;color:#ef4444"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Vencidas</div><div class="font-display font-bold text-3xl" id="verKpiVenc">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1">Ação imediata</div></div><div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.verifFilter('Em Dia')" title="Filtrar: Conformidade"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(6,182,212,0.12)"><i data-lucide="target" style="width:20px;height:20px;color:#06b6d4"></i></div><i data-lucide="arrow-right" class="text-[var(--fg-dim)]" style="width:16px;height:16px;margin-top:4px"></i></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Conformidade</div><div class="font-display font-bold text-3xl" id="verKpiConf">0</div><div class="text-[11px] text-[var(--fg-dim)] mt-1">% dentro do prazo</div></div></div>
+      <div class="card p-5 mb-6" id="verCronoCard">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+          <div><h3 class="font-display font-bold text-lg flex items-center gap-2"><i data-lucide="gantt-chart" style="width:18px;height:18px" class="text-[var(--accent-bright)]"></i>Cronograma de Verificações</h3><p class="text-xs text-[var(--fg-muted)] mt-0.5">Clique em um mês para filtrar • clique em um marcador para abrir o dispositivo</p></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-3 text-[11px] text-[var(--fg-muted)] mr-2"><span class="flex items-center gap-1"><span class="vc-dot" style="background:#22c55e"></span>Realizada</span><span class="flex items-center gap-1"><span class="vc-dot" style="background:#06b6d4"></span>Planejada</span><span class="flex items-center gap-1"><span class="vc-dot" style="background:#f59e0b"></span>Próxima</span><span class="flex items-center gap-1"><span class="vc-dot" style="background:#ef4444"></span>Vencida</span></div>
+            <button class="btn-ghost px-2.5 py-1.5 rounded-lg text-xs font-semibold" onclick="window.verifShift(-3)" title="Anterior">‹</button>
+            <button class="btn-ghost px-3 py-1.5 rounded-lg text-xs font-semibold" onclick="window.verifShift(0)">Hoje</button>
+            <button class="btn-ghost px-2.5 py-1.5 rounded-lg text-xs font-semibold" onclick="window.verifShift(3)" title="Próximo">›</button>
+            <span id="verMonthChip" class="hidden text-[11px] font-semibold px-2 py-1 rounded-md cursor-pointer" style="background:rgba(255,107,26,0.15);color:var(--accent-bright)" onclick="window.verifMonth(null)"></span>
+          </div>
+        </div>
+        <div class="overflow-x-auto scrollbar"><div id="verCronograma" style="min-width:900px"></div></div>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Status do Cronograma</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Distribuição atual</p><div style="height:200px"><canvas id="chartCalStatus"></canvas></div></div>
-        <div class="card p-5 lg:col-span-2"><h3 class="font-display font-bold text-lg mb-1">Calibrações por Mês</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Planejado vs Realizado</p><div style="height:200px"><canvas id="chartCalMeses"></canvas></div></div>
+        <div class="card p-5"><h3 class="font-display font-bold text-lg mb-1">Status do Cronograma</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Clique para filtrar</p><div style="height:200px"><canvas id="chartCalStatus" style="cursor:pointer"></canvas></div></div>
+        <div class="card p-5 lg:col-span-2"><h3 class="font-display font-bold text-lg mb-1">Verificações por Mês</h3><p class="text-xs text-[var(--fg-muted)] mb-4">Planejado vs Realizado • clique em um mês</p><div style="height:200px"><canvas id="chartCalMeses" style="cursor:pointer"></canvas></div></div>
       </div>
       <div class="card p-4 mb-5">
         <div class="flex flex-col lg:flex-row gap-3">
@@ -685,10 +722,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <button class="btn-ghost px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2" onclick="window.exportAuditCSV()"><i data-lucide="download" style="width:15px;height:15px"></i>Exportar CSV</button>
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="scroll-text" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Eventos</div><div class="font-display font-bold text-3xl" id="audTotal">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="user-check" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Usuários Ativos</div><div class="font-display font-bold text-3xl" id="audUsuarios">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="alert-octagon" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Exclusões</div><div class="font-display font-bold text-3xl" id="audExclusoes">0</div></div>
-        <div class="card kpi-card p-5"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(168,85,247,0.12)] flex items-center justify-center"><i data-lucide="edit-3" class="text-[var(--purple)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Edições</div><div class="font-display font-bold text-3xl" id="audEdicoes">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('audFilterAcao','')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(6,182,212,0.12)] flex items-center justify-center"><i data-lucide="scroll-text" class="text-[var(--cyan)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Total de Eventos</div><div class="font-display font-bold text-3xl" id="audTotal">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('audFilterAcao','')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(34,197,94,0.12)] flex items-center justify-center"><i data-lucide="user-check" class="text-[var(--green)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Usuários Ativos</div><div class="font-display font-bold text-3xl" id="audUsuarios">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('audFilterAcao','Exclusão')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(245,158,11,0.12)] flex items-center justify-center"><i data-lucide="alert-octagon" class="text-[var(--amber)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Exclusões</div><div class="font-display font-bold text-3xl" id="audExclusoes">0</div></div>
+        <div class="card kpi-card p-5 cursor-pointer card-glow" onclick="window.setSel('audFilterAcao','Edição')" title="Clique para detalhar"><div class="flex items-start justify-between mb-3"><div class="w-10 h-10 rounded-lg bg-[rgba(168,85,247,0.12)] flex items-center justify-center"><i data-lucide="edit-3" class="text-[var(--purple)]" style="width:20px;height:20px"></i></div></div><div class="text-[var(--fg-muted)] text-xs font-medium mb-1">Edições</div><div class="font-display font-bold text-3xl" id="audEdicoes">0</div></div>
       </div>
       <div class="card p-4 mb-5">
         <div class="flex flex-col lg:flex-row gap-3">
@@ -1009,6 +1046,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav" id="bottomNav">
   <div class="bottom-nav-inner">
+    <div class="bnav-item" data-view="calibracao" onclick="window.switchView('calibracao')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+      Verificação
+    </div>
     <div class="bnav-item active" data-view="dashboard" onclick="window.switchView('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard
@@ -1573,7 +1614,7 @@ function renderDashboard() {
   const cal = pokaYokes.filter(p => p.proximaVerificacao).map(p => ({ ...p, d: daysUntil(p.proximaVerificacao) })).filter(p => p.d <= 30 && p.d >= -5).sort((a, b) => a.d - b.d);
   document.getElementById('calibracoesList').innerHTML = cal.length ? cal.map(p => 
     `<div class="flex items-center gap-3 p-2.5 rounded-lg ${p.d < 0 ? 'bg-[rgba(239,68,68,0.08)]' : p.d < 7 ? 'bg-[rgba(245,158,11,0.08)]' : 'bg-[var(--bg-3)]'}"><div class="w-1 h-10 rounded-full" style="background:${p.d < 0 ? '#ef4444' : p.d < 7 ? '#f59e0b' : '#06b6d4'}"></div><div class="flex-1 min-w-0"><div class="text-[13px] font-semibold truncate">${escapeHtml(p.nome)}</div><div class="text-[11px] text-[var(--fg-dim)] font-mono">${p.id} • ${p.estacao}</div></div><div class="text-right"><div class="text-[11px] font-bold" style="color:${p.d < 0 ? '#fca5a5' : p.d < 7 ? '#fbbf24' : '#67e8f9'}">${p.d < 0 ? 'Vencido' : `${p.d}d`}</div><div class="text-[10px] text-[var(--fg-dim)] font-mono">${fmtDate(p.proximaVerificacao)}</div></div></div>`
-  ).join('') : '<div class="text-center text-sm text-[var(--fg-dim)] py-8">Nenhuma calibração próxima</div>';
+  ).join('') : '<div class="text-center text-sm text-[var(--fg-dim)] py-8">Nenhuma verificação próxima</div>';
   
   lucide.createIcons();
 }
@@ -1632,7 +1673,7 @@ function renderCharts() {
     _mkChart('chartTipos', {
       type: 'doughnut',
       data: { labels: tipos, datasets: [{ data: counts, backgroundColor: tipos.map(t => TIPOS_COLORS[t]), borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } }
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', onHover: _hov, onClick: (e, el) => { if (el.length) goPk({ tipo: tipos[el[0].index] }); }, plugins: { legend: { display: false } } }
     });
     const lg = document.getElementById('chartTiposLegend');
     if (lg) lg.innerHTML = tipos.map((t, i) => `<div class="flex items-center justify-between text-sm"><div class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:3px;background:${TIPOS_COLORS[t]};display:inline-block"></span><span>${t}</span></div><span class="font-mono font-bold">${counts[i]}</span></div>`).join('');
@@ -1643,7 +1684,26 @@ function renderCharts() {
     _mkChart('chartLinhas', {
       type: 'bar',
       data: { labels: lin.map(l => l.codigo), datasets: [{ label: 'Eficiência (%)', data: efs, backgroundColor: lin.map(l => l.cor || '#ff6b1a'), borderRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+      options: { responsive: true, maintainAspectRatio: false, onHover: _hov, onClick: (e, el) => { if (el.length) goPk({ linha: lin[el[0].index].codigo }); }, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+    });
+  }
+
+  if (currentView === 'dashboard') {
+    const cv = buildCalibracoes();
+    const venc = cv.filter(x => x.status === 'Vencida');
+    const el = document.getElementById('dashKpiVencidas'); if (el) el.textContent = venc.length;
+    const sub = document.getElementById('dashKpiVencidasSub'); if (sub) sub.textContent = venc.length ? 'Maior atraso: ' + Math.max(...venc.map(x => Math.abs(x.dias || 0))) + 'd' : 'Tudo em dia';
+    const lv = [...new Set(pokaYokes.map(p => p.linha))].sort();
+    const byL = (st) => lv.map(l => cv.filter(x => x.status === st && (pokaYokes.find(p => p.id === x.pokaYokeId) || {}).linha === l).length);
+    _mkChart('chartVencidos', {
+      type: 'bar',
+      data: { labels: lv, datasets: [
+        { label: 'Vencidas', data: byL('Vencida'), backgroundColor: '#ef4444', borderRadius: 6 },
+        { label: 'A vencer (30d)', data: byL('Próxima'), backgroundColor: '#f59e0b', borderRadius: 6 }
+      ] },
+      options: { responsive: true, maintainAspectRatio: false, onHover: _hov,
+        onClick: (e, els) => { if (!els.length) return; const l = lv[els[0].index]; const st = els[0].datasetIndex === 0 ? 'Vencida' : 'Próxima'; verifFilter(st); const s2 = document.getElementById('calSearch'); s2.value = l; renderCalibracao(); },
+        plugins: { legend: { labels: { color: c.text } } }, scales: { x: axis({ stacked: true }), y: axis({ stacked: true, beginAtZero: true, ticks: { color: c.text, precision: 0 } }) } }
     });
   }
 
@@ -1653,7 +1713,7 @@ function renderCharts() {
     _mkChart('chartCalStatus', {
       type: 'doughnut',
       data: { labels: sts, datasets: [{ data: sts.map(x => cals.filter(c => c.status === x).length), backgroundColor: cols, borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: c.text } } } }
+      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', onHover: _hov, onClick: (e, el) => { if (el.length) verifFilter(sts[el[0].index]); }, plugins: { legend: { position: 'bottom', labels: { color: c.text } } } }
     });
     const now = new Date(), labels = [], keys = [];
     for (let i = -5; i <= 5; i++) {
@@ -1667,7 +1727,7 @@ function renderCharts() {
         { label: 'Planejado', data: keys.map(k => cals.filter(x => (x.proxima || '').startsWith(k)).length), backgroundColor: '#06b6d4', borderRadius: 4 },
         { label: 'Realizado', data: keys.map(k => cals.filter(x => (x.ultima || '').startsWith(k)).length), backgroundColor: '#22c55e', borderRadius: 4 }
       ] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: c.text } } }, scales: { x: axis(), y: axis({ beginAtZero: true, ticks: { color: c.text, precision: 0 } }) } }
+      options: { responsive: true, maintainAspectRatio: false, onHover: _hov, onClick: (e, el) => { if (el.length) verifMonth(keys[el[0].index]); }, plugins: { legend: { labels: { color: c.text } } }, scales: { x: axis(), y: axis({ beginAtZero: true, ticks: { color: c.text, precision: 0 } }) } }
     });
   }
 
@@ -1676,8 +1736,8 @@ function renderCharts() {
     const tr = _trendData();
     _mkChart('chartTrend', {
       type: 'line',
-      data: { labels: tr.labels, datasets: [{ label: 'Eficiência média (%)', data: tr.values, borderColor: '#ff6b1a', backgroundColor: 'rgba(255,107,26,0.12)', fill: true, tension: 0.35, pointRadius: 3, spanGaps: true }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+      data: { labels: tr.labels, datasets: [{ label: 'Eficiência média (%)', data: tr.values, borderColor: '#ff6b1a', backgroundColor: 'rgba(255,107,26,0.12)', fill: true, tension: 0.35, pointRadius: 4, pointHoverRadius: 7, spanGaps: true }] },
+      options: { responsive: true, maintainAspectRatio: false, onHover: _hov, onClick: (e, el) => { if (el.length) { showToast('Eficiência em ' + tr.labels[el[0].index] + ': ' + tr.values[el[0].index] + '%', 'info'); goPk({}); } }, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
     });
 
     // Eficiência por tipo
@@ -1686,7 +1746,7 @@ function renderCharts() {
     _mkChart('chartTipoEf', {
       type: 'bar',
       data: { labels: tipos, datasets: [{ label: 'Eficiência (%)', data: efT, backgroundColor: tipos.map(t => TIPOS_COLORS[t]), borderRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
+      options: { responsive: true, maintainAspectRatio: false, onHover: _hov, onClick: (e, el) => { if (el.length) goPk({ tipo: tipos[el[0].index] }); }, plugins: { legend: { display: false } }, scales: { x: axis(), y: axis({ min: 0, max: 100 }) } }
     });
   }
 }
@@ -1871,7 +1931,97 @@ function renderManutencao() {
   lucide.createIcons();
 }
 
-// Calibração: derivada dos poka-yokes (última/próxima verificação)
+
+// ===== Navegação por clique (KPIs / gráficos) =====
+function _hov(e, el) { if (e.native && e.native.target) e.native.target.style.cursor = el.length ? 'pointer' : 'default'; }
+function goPk(f) {
+  switchView('pokayokes');
+  const map = { search: 'pkSearch', linha: 'pkFilterLinha', tipo: 'pkFilterTipo', status: 'pkFilterStatus' };
+  ['search','linha','tipo','status','vencimento'].forEach(k => { currentFilters[k] = f[k] || ''; if (map[k]) { const el = document.getElementById(map[k]); if (el) el.value = f[k] || ''; } });
+  const v = document.getElementById('pkFilterVencimento'); if (v) v.value = '';
+  window.currentFilters = currentFilters;
+  renderPokaYokes();
+  const lbl = Object.entries(f).map(([k, x]) => x).join(' • ');
+  if (lbl) showToast('Filtro: ' + lbl, 'info');
+}
+function setSel(id, val) {
+  const el = document.getElementById(id); if (!el) return;
+  el.value = val; el.dispatchEvent(new Event('change'));
+  const sec = el.closest('section'); const t = el.closest('.card') || el;
+  t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast(val ? 'Filtro: ' + val : 'Mostrando todos', 'info');
+}
+function scrollToEl(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+
+// ===== Verificação: cronograma =====
+let _verOffset = 0, _verMonth = null;
+function verifFilter(st) {
+  if (currentView !== 'calibracao') switchView('calibracao');
+  _verMonth = null;
+  const el = document.getElementById('calFilterStatus'); el.value = st || '';
+  renderCalibracao();
+  document.getElementById('verCronoCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast(st ? 'Verificações: ' + st : 'Todas as verificações', 'info');
+}
+function verifMonth(k) { _verMonth = (k && _verMonth !== k) ? k : null; renderCalibracao(); if (k) document.getElementById('verCronoCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function verifShift(n) { _verOffset = n === 0 ? 0 : _verOffset + n; renderCronograma(); }
+function _verList() {
+  const q = (document.getElementById('calSearch')?.value || '').toLowerCase().trim();
+  const st = document.getElementById('calFilterStatus')?.value || '';
+  return buildCalibracoes().filter(c => {
+    const pk = pokaYokes.find(p => p.id === c.pokaYokeId);
+    if (st && c.status !== st) return false;
+    if (_verMonth && !(c.proxima || '').startsWith(_verMonth) && !(c.ultima || '').startsWith(_verMonth)) return false;
+    if (q && !`${c.id} ${c.pokaYokeId} ${pk?.nome || ''} ${pk?.estacao || ''}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => (a.dias ?? 99999) - (b.dias ?? 99999));
+}
+function renderCronograma() {
+  const all = buildCalibracoes();
+  const n = all.length, emDia = all.filter(c => c.status === 'Em Dia').length, prox = all.filter(c => c.status === 'Próxima').length, venc = all.filter(c => c.status === 'Vencida').length;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('verKpiTotal', n); set('verKpiEmDia', emDia); set('verKpiProx', prox); set('verKpiVenc', venc);
+  set('verKpiConf', n ? Math.round((n - venc) / n * 100) + '%' : '—'); set('sidebarVencidas', venc);
+  const box = document.getElementById('verCronograma'); if (!box) return;
+  const now = new Date(), COLS = 12;
+  const start = new Date(now.getFullYear(), now.getMonth() - 3 + _verOffset, 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + COLS, 1);
+  const span = end - start;
+  const pos = d => { if (!d) return null; const t = new Date(d + 'T12:00:00'); if (t < start || t >= end) return null; return (t - start) / span * 100; };
+  const months = [];
+  for (let i = 0; i < COLS; i++) { const d = new Date(start.getFullYear(), start.getMonth() + i, 1); months.push({ k: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, l: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + (d.getMonth() === 0 || i === 0 ? ' ' + String(d.getFullYear()).slice(2) : ''), now: d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() }); }
+  const chip = document.getElementById('verMonthChip');
+  if (_verMonth) { chip.classList.remove('hidden'); chip.textContent = 'Mês: ' + _verMonth.split('-').reverse().join('/') + '  ✕'; } else chip.classList.add('hidden');
+  const list = _verList();
+  const todayP = pos(now.toISOString().slice(0, 10));
+  const colStatus = { 'Em Dia': '#06b6d4', 'Próxima': '#f59e0b', 'Vencida': '#ef4444' };
+  let h = `<div class="vc-grid" style="--vc-cols:${COLS}"><div class="vc-head" style="text-align:left;cursor:default">Dispositivo (${list.length})</div>`;
+  h += months.map(m => { const cnt = all.filter(c => (c.proxima || '').startsWith(m.k)).length; return `<div class="vc-head ${m.now ? 'now' : ''} ${_verMonth === m.k ? 'sel' : ''}" onclick="window.verifMonth('${m.k}')" title="Filtrar ${m.k}">${m.l}<span class="vc-cnt">${cnt || '·'}</span></div>`; }).join('');
+  if (!list.length) h += `<div style="grid-column:1/-1" class="text-center text-sm text-[var(--fg-dim)] py-10">Nenhuma verificação no filtro atual</div>`;
+  list.forEach((c, idx) => {
+    const pk = pokaYokes.find(p => p.id === c.pokaYokeId);
+    const pu = pos(c.ultima), pp = pos(c.proxima);
+    const col = colStatus[c.status];
+    const a = pu ?? (c.ultima && new Date(c.ultima) < start ? 0 : null), b = pp ?? (c.proxima && new Date(c.proxima) >= end ? 100 : null);
+    let bar = (a !== null && b !== null) ? `<div class="vc-bar" style="left:${a}%;width:${Math.max(0, b - a)}%;background:linear-gradient(90deg,#22c55e,${col})"></div>` : '';
+    let mk = '';
+    if (pu !== null) mk += `<div class="vc-mk" style="left:${pu}%;background:#22c55e" title="Realizada: ${fmtDate(c.ultima)}" onclick="window.openCalibracaoDetail('${c.pokaYokeId}')"></div>`;
+    if (pp !== null) mk += `<div class="vc-mk ${c.status === 'Vencida' ? 'venc' : ''}" style="left:${pp}%;background:${col}" title="${c.status}: ${fmtDate(c.proxima)}${c.dias !== null ? ' (' + (c.dias < 0 ? Math.abs(c.dias) + 'd atrasada' : 'em ' + c.dias + 'd') + ')' : ''}" onclick="window.openCalibracaoDetail('${c.pokaYokeId}')"></div>`;
+    if (pp === null && c.proxima && new Date(c.proxima + 'T12:00:00') < start) mk += `<div class="vc-mk venc" style="left:1.2%;background:#ef4444" title="Vencida em ${fmtDate(c.proxima)} (${Math.abs(c.dias)}d atrasada)" onclick="window.openCalibracaoDetail('${c.pokaYokeId}')"></div><span style="position:absolute;left:2.6%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#f87171;font-family:monospace">◀ ${Math.abs(c.dias)}d atrasada • ${fmtDate(c.proxima)}</span>`;
+    if (pp === null && c.proxima && new Date(c.proxima + 'T12:00:00') >= end) mk += `<span style="position:absolute;right:1%;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--fg-muted);font-family:monospace">${fmtDate(c.proxima)} ▶</span>`;
+    const today = (todayP !== null) ? `<div class="vc-today" style="left:${todayP}%"></div>${idx === 0 ? `<div class="vc-today-tag" style="left:${todayP}%">HOJE</div>` : ''}` : '';
+    h += `<div class="vc-row"><div class="vc-label" onclick="window.openCalibracaoDetail('${c.pokaYokeId}')" title="${escapeHtml(pk?.nome || '')}"><span class="vc-dot" style="background:${col};margin-right:6px"></span><span class="font-mono text-[11px] font-bold text-[var(--accent-bright)]">${c.pokaYokeId}</span> <span class="text-[var(--fg-muted)]">${escapeHtml(pk?.nome || '')}</span></div><div class="vc-track">${today}${bar}${mk}</div></div>`;
+  });
+  box.innerHTML = h + '</div>';
+}
+window.verifExportCSV = function() {
+  const rows = [['ID', 'Poka-Yoke', 'Nome', 'Estação', 'Última', 'Próxima', 'Dias', 'Status']].concat(_verList().map(c => { const pk = pokaYokes.find(p => p.id === c.pokaYokeId); return [c.id, c.pokaYokeId, pk?.nome || '', pk?.estacao || '', c.ultima, c.proxima, c.dias ?? '', c.status]; }));
+  const csv = rows.map(r => r.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(';')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })); a.download = 'cronograma-verificacao.csv'; a.click();
+};
+Object.assign(window, { goPk, setSel, scrollToEl, verifFilter, verifMonth, verifShift, renderCronograma });
+
+// Verificação: derivada dos poka-yokes (última/próxima verificação)
 function buildCalibracoes() {
   return pokaYokes.filter(p => p.ultimaVerificacao || p.proximaVerificacao).map(p => {
     const d = p.proximaVerificacao ? daysUntil(p.proximaVerificacao) : null;
@@ -1903,6 +2053,7 @@ function renderCalibracao() {
   const list = calibracoes.filter(c => {
     const pk = pokaYokes.find(p => p.id === c.pokaYokeId);
     if (st && c.status !== st) return false;
+    if (_verMonth && !(c.proxima || '').startsWith(_verMonth) && !(c.ultima || '').startsWith(_verMonth)) return false;
     if (q && !`${c.id} ${c.certificado} ${c.pokaYokeId} ${pk?.nome || ''} ${pk?.estacao || ''}`.toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => (a.dias ?? 99999) - (b.dias ?? 99999));
@@ -1911,7 +2062,8 @@ function renderCalibracao() {
     const pk = pokaYokes.find(p => p.id === c.pokaYokeId);
     const resColor = c.resultado === 'Aprovado' ? '#22c55e' : '#f59e0b';
     return `<div class="card card-glow p-5 cursor-pointer" onclick="window.openCalibracaoDetail('${c.pokaYokeId}')"><div class="flex items-start justify-between mb-3"><div><span class="font-mono text-xs font-bold text-[var(--accent-bright)]">${c.id}</span><div class="text-[11px] text-[var(--fg-dim)] font-mono mt-0.5">${c.certificado}</div></div><span class="badge" style="${CAL_STATUS_STYLE[c.status]}">${c.status}</span></div><h3 class="font-display font-bold text-sm mb-1 leading-tight">${escapeHtml(pk?.nome || c.pokaYokeId)}</h3><div class="text-xs text-[var(--fg-muted)] mb-4 font-mono">${c.pokaYokeId} • ${pk?.estacao || '—'}</div><div class="grid grid-cols-2 gap-3 mb-3"><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Última</div><div class="text-xs font-mono font-semibold">${c.ultima ? fmtDate(c.ultima) : '—'}</div></div><div class="bg-[var(--bg-3)] rounded-lg p-2.5"><div class="text-[10px] text-[var(--fg-dim)] uppercase tracking-wider font-bold mb-1">Próxima</div><div class="text-xs font-mono font-semibold">${c.proxima ? fmtDate(c.proxima) : '—'}</div></div></div><div class="flex items-center justify-between pt-3 border-t border-[var(--border)]"><span class="text-xs font-bold" style="color:${resColor}">${c.resultado}</span><span class="text-[10px] font-mono text-[var(--fg-dim)]">${escapeHtml(c.incerteza)}</span></div></div>`;
-  }).join('') : '<div class="col-span-full card p-12 text-center text-[var(--fg-dim)]">Nenhuma calibração</div>';
+  }).join('') : '<div class="col-span-full card p-12 text-center text-[var(--fg-dim)]">Nenhuma verificação</div>';
+  renderCronograma();
   lucide.createIcons();
 }
 
@@ -2808,7 +2960,7 @@ window.exportAuditCSV = function() {
 window.toggleNotifications = function() {
   const e = document.getElementById('notifPanel');
   if (e) { e.remove(); return; }
-  const n = [{ tipo: 'danger', titulo: 'Calibração vencida', msg: 'PY-003 está com calibração vencida', tempo: '2h atrás', icon: 'alert-triangle' }, { tipo: 'warning', titulo: 'Manutenção em andamento', msg: 'PY-010 em calibração', tempo: '5h atrás', icon: 'wrench' }, { tipo: 'info', titulo: 'Nova OS criada', msg: 'OS-2024-0142 aberta', tempo: '1d atrás', icon: 'clipboard-list' }];
+  const n = [{ tipo: 'danger', titulo: 'Verificação vencida', msg: 'PY-003 está com verificação vencida', tempo: '2h atrás', icon: 'alert-triangle' }, { tipo: 'warning', titulo: 'Manutenção em andamento', msg: 'PY-010 em calibração', tempo: '5h atrás', icon: 'wrench' }, { tipo: 'info', titulo: 'Nova OS criada', msg: 'OS-2024-0142 aberta', tempo: '1d atrás', icon: 'clipboard-list' }];
   const p = document.createElement('div');
   p.id = 'notifPanel';
   p.className = 'modal-backdrop';
