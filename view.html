@@ -10,369 +10,226 @@
 (function(){try{var h=new Date().getHours(),a=(h>=6&&h<18)?"light":"dark",m=a,o=JSON.parse(localStorage.getItem("pkViewThemeOverride")||"null");if(o&&o.period===a)m=o.mode;if(m==="light")document.documentElement.classList.add("light")}catch(e){}})();</script>
 <title>Poka-Yoke | Röchling Automotive</title>
 
-<!-- Firebase Compat -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
   :root {
-    --bg:       #0a0d12;
-    --bg2:      #111620;
-    --bg3:      #1a2030;
-    --border:   rgba(255,255,255,0.07);
-    --fg:       #e8edf3;
-    --fg-muted: #8a98ac;
-    --fg-dim:   #4a5568;
-    --accent:   #ff6b1a;
-    --green:    #22c55e;
-    --amber:    #f59e0b;
-    --red:      #ef4444;
-    --cyan:     #06b6d4;
-    --accent-text: #ff9a52;
-    --track:    #1d2532;
+    --bg:#0a0d12; --bg2:#111620; --bg3:#1a2030; --border:rgba(255,255,255,0.07);
+    --fg:#e8edf3; --fg-muted:#8a98ac; --fg-dim:#5a6878;
+    --accent:#ff6b1a; --accent-text:#ff9a52;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --cyan:#06b6d4; --gray:#8a98ac;
+    --track:#1d2532; --shadow:0 10px 30px -12px rgba(0,0,0,.6);
   }
   html.light {
-    --bg:       #f1f5f9;
-    --bg2:      #ffffff;
-    --bg3:      #e2e8f0;
-    --border:   rgba(15,23,42,0.12);
-    --fg:       #0f172a;
-    --fg-muted: #475569;
-    --fg-dim:   #64748b;
-    --accent:   #ea580c;
-    --green:    #16a34a;
-    --amber:    #b45309;
-    --red:      #dc2626;
-    --cyan:     #0e7490;
-    --accent-text: #c2410c;
-    --track:    #e2e8f0;
+    --bg:#f1f5f9; --bg2:#ffffff; --bg3:#e2e8f0; --border:rgba(15,23,42,0.1);
+    --fg:#0f172a; --fg-muted:#475569; --fg-dim:#64748b;
+    --accent:#ea580c; --accent-text:#c2410c;
+    --green:#16a34a; --amber:#b45309; --red:#dc2626; --cyan:#0e7490; --gray:#64748b;
+    --track:#e2e8f0; --shadow:0 8px 24px -14px rgba(15,23,42,.25);
   }
-  html.light .logo-dot { box-shadow: none; }
-  html.light .info-card, html.light .eff-row, html.light .descricao { box-shadow: 0 1px 2px rgba(15,23,42,0.05); }
-  body, header, .info-card, .eff-row, .descricao, footer { transition: background-color .3s ease, color .3s ease, border-color .3s ease; }
-  .theme-btn {
-    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; flex-shrink: 0;
-    background: var(--bg3); border: 1px solid var(--border); color: var(--fg-muted);
-    font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { -webkit-text-size-adjust:100%; }
   body {
-    background: var(--bg);
-    color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background:var(--bg); color:var(--fg); min-height:100vh; display:flex; flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    transition:background-color .3s ease,color .3s ease;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(circle at 15% -5%, color-mix(in srgb,var(--accent) 14%,transparent) 0%, transparent 40%);
   }
 
-  /* ─── LOADING ─── */
-  #loadingScreen {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 16px;
-    z-index: 100;
-  }
-  .spinner {
-    width: 48px; height: 48px;
-    border: 3px solid var(--bg3);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  /* LOADING / ERRO */
+  #loadingScreen { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:100; }
+  .spinner { width:48px; height:48px; border:3px solid var(--bg3); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #errorScreen { display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:32px; text-align:center; position:relative; z-index:1; }
+  .error-icon { width:64px; height:64px; border-radius:50%; background:rgba(239,68,68,.12); display:flex; align-items:center; justify-content:center; font-size:28px; }
 
-  /* ─── ERROR / NOT FOUND ─── */
-  #errorScreen {
-    display: none;
-    flex: 1; align-items: center; justify-content: center;
-    flex-direction: column; gap: 12px; padding: 32px; text-align: center;
-  }
-  .error-icon {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: rgba(239,68,68,0.12);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; margin-bottom: 8px;
-  }
-
-  /* ─── HEADER ─── */
+  /* HEADER */
   header {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
-    display: flex; align-items: center; gap: 10px;
+    position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;
+    padding:12px 16px; background:color-mix(in srgb,var(--bg2) 88%,transparent);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--border);
   }
-  .logo-bar {
-    display: flex; align-items: center; gap: 10px; flex: 1;
-  }
-  .logo-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-  }
-  .logo-text {
-    font-size: 13px; font-weight: 700;
-    color: var(--fg-muted); letter-spacing: 0.05em; text-transform: uppercase;
-  }
-  .readonly-badge {
-    background: rgba(6,182,212,0.12);
-    border: 1px solid rgba(6,182,212,0.3);
-    color: var(--cyan);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 20px;
-  }
+  .logo-mark { width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#ff6b1a,#ff8536); color:#0a0d12; font-weight:900; font-size:15px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px -2px rgba(255,107,26,.5); }
+  .logo-text { flex:1; line-height:1.15; }
+  .logo-text b { display:block; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .logo-text span { font-size:10px; color:var(--fg-dim); letter-spacing:.06em; text-transform:uppercase; }
+  .readonly-badge { background:rgba(6,182,212,.12); border:1px solid rgba(6,182,212,.3); color:var(--cyan); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:4px 8px; border-radius:20px; white-space:nowrap; }
+  .theme-btn { width:32px; height:32px; border-radius:8px; cursor:pointer; flex-shrink:0; background:var(--bg3); border:1px solid var(--border); color:var(--fg-muted); font-size:15px; display:flex; align-items:center; justify-content:center; }
 
-  /* ─── CARD PRINCIPAL ─── */
-  main {
-    flex: 1; padding: 20px 16px 40px;
-    max-width: 600px; width: 100%; margin: 0 auto;
-  }
+  main { position:relative; z-index:1; flex:1; padding:16px 16px 36px; max-width:640px; width:100%; margin:0 auto; }
+  .rise { opacity:0; transform:translateY(12px); animation:rise .5s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes rise { to { opacity:1; transform:none; } }
 
-  /* Status banner */
-  .status-banner {
-    border-radius: 12px; padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 20px;
-    border: 1px solid;
-  }
-  .status-banner.ativo    { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25);  }
-  .status-banner.manut    { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
-  .status-banner.inativo  { background: rgba(138,152,172,0.08);border-color: rgba(138,152,172,0.2); }
-  .status-banner.critico  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.25);  }
+  /* HERO */
+  .hero { position:relative; overflow:hidden; background:var(--bg2); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .hero-bar { height:5px; background:var(--st,var(--gray)); }
+  .hero-glow { position:absolute; top:-60px; right:-60px; width:200px; height:200px; border-radius:50%; background:var(--st,var(--gray)); opacity:.12; filter:blur(40px); pointer-events:none; }
+  .hero-body { position:relative; padding:18px 18px 20px; }
+  .status-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 12px 6px 10px; border-radius:999px; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--st,var(--gray)); background:color-mix(in srgb,var(--st,var(--gray)) 12%,transparent); border:1px solid color-mix(in srgb,var(--st,var(--gray)) 35%,transparent); }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--st,var(--gray)); position:relative; }
+  .dot.live::after { content:''; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid var(--st); animation:ping 1.8s ease-out infinite; }
+  @keyframes ping { 0%{transform:scale(.6);opacity:.9} 100%{transform:scale(1.8);opacity:0} }
+  .status-sub { font-size:12px; color:var(--fg-muted); margin-top:8px; }
+  .pk-id { display:inline-block; margin-top:16px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; font-weight:800; letter-spacing:.1em; color:var(--accent-text); background:color-mix(in srgb,var(--accent) 12%,transparent); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent); padding:3px 9px; border-radius:6px; }
+  .pk-nome { font-size:24px; font-weight:800; line-height:1.2; letter-spacing:-.01em; margin:10px 0 14px; overflow-wrap:anywhere; }
+  .tags { display:flex; flex-wrap:wrap; gap:8px; }
+  .tag { display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid; }
+  .tag i { width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block; }
 
-  .pulse {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    position: relative;
-  }
-  .pulse::after {
-    content: ''; position: absolute; inset: -3px;
-    border-radius: 50%; opacity: 0.4;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.4} 50%{transform:scale(1.6);opacity:0} }
+  /* EFICIÊNCIA */
+  .eff { display:flex; align-items:center; gap:20px; background:var(--bg2); border:1px solid var(--border); border-radius:18px; padding:18px 20px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .ring-wrap { position:relative; width:112px; height:112px; flex-shrink:0; }
+  .ring-wrap svg { transform:rotate(-90deg); display:block; }
+  .ring-fill { transition:stroke-dashoffset 1.1s cubic-bezier(.16,1,.3,1); }
+  .ring-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-pct { font-size:24px; font-weight:800; line-height:1; letter-spacing:-.02em; }
+  .ring-sub { font-size:9px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:.08em; margin-top:4px; font-weight:700; }
+  .eff-txt { flex:1; min-width:0; }
+  .eff-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--fg-dim); }
+  .eff-verdict { font-size:18px; font-weight:800; margin-top:4px; }
+  .eff-hint { font-size:12px; color:var(--fg-muted); margin-top:4px; line-height:1.4; }
 
-  .status-banner.ativo   .pulse { background: var(--green); }
-  .status-banner.ativo   .pulse::after { background: var(--green); }
-  .status-banner.manut   .pulse { background: var(--amber); }
-  .status-banner.manut   .pulse::after { background: var(--amber); }
-  .status-banner.inativo .pulse { background: var(--fg-dim); }
-  .status-banner.inativo .pulse::after { animation: none; }
-  .status-banner.critico .pulse { background: var(--red); }
-  .status-banner.critico .pulse::after { background: var(--red); }
+  /* VERIFICAÇÃO */
+  .verif { background:var(--bg2); border:1px solid var(--border); border-radius:18px; padding:16px 18px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .verif-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+  .lbl { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-dim); margin-bottom:4px; }
+  .val { font-size:14px; font-weight:700; line-height:1.3; overflow-wrap:anywhere; }
+  .val.mono { font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .days { text-align:right; }
+  .days b { display:block; font-size:26px; line-height:1; font-weight:800; letter-spacing:-.02em; }
+  .days span { font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+  .vbar { height:8px; border-radius:4px; background:var(--track); overflow:hidden; margin:14px 0 10px; }
+  .vbar > div { height:100%; border-radius:4px; width:0; transition:width 1s cubic-bezier(.16,1,.3,1); }
+  .verif-bot { display:flex; justify-content:space-between; font-size:11px; color:var(--fg-muted); font-family:ui-monospace,Menlo,Consolas,monospace; }
 
-  .status-label { font-weight: 700; font-size: 14px; }
-  .status-banner.ativo   .status-label { color: var(--green); }
-  .status-banner.manut   .status-label { color: var(--amber); }
-  .status-banner.inativo .status-label { color: var(--fg-muted); }
-  .status-banner.critico .status-label { color: var(--red); }
-  .status-sub { font-size: 11px; color: var(--fg-muted); margin-top: 1px; }
+  /* SEÇÕES */
+  .section-title { display:flex; align-items:center; gap:10px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--fg-dim); margin:22px 2px 10px; }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .info-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px 13px; }
+  .info-card.full { grid-column:1/-1; }
+  .info-card.line { border-left:3px solid var(--lc,var(--accent)); }
+  .box { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px; font-size:13px; color:var(--fg-muted); line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+  details.acc { background:var(--bg2); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  details.acc summary { list-style:none; cursor:pointer; padding:14px; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:space-between; }
+  details.acc summary::-webkit-details-marker { display:none; }
+  details.acc summary::after { content:'▾'; color:var(--fg-muted); transition:transform .2s ease; }
+  details.acc[open] summary::after { transform:rotate(180deg); }
+  details.acc .box { border:0; border-top:1px solid var(--border); border-radius:0; }
 
-  /* ID + Nome */
-  .pk-id {
-    font-size: 11px; font-weight: 700; font-family: monospace;
-    color: var(--accent); letter-spacing: 0.08em; margin-bottom: 4px;
-  }
-  .pk-nome {
-    font-size: 22px; font-weight: 800; line-height: 1.2;
-    margin-bottom: 20px;
-  }
+  .timeline { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:6px 16px; }
+  .t-item { position:relative; display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .t-item:last-child { border-bottom:0; }
+  .t-dot { width:9px; height:9px; border-radius:50%; background:var(--accent); flex-shrink:0; margin-top:5px; }
+  .t-ev { font-size:13px; font-weight:600; overflow-wrap:anywhere; }
+  .t-meta { font-size:11px; color:var(--fg-muted); margin-top:2px; font-family:ui-monospace,Menlo,Consolas,monospace; }
 
-  /* Eficiência ring */
-  .eff-row {
-    display: flex; align-items: center; gap: 20px;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 14px; padding: 16px 20px; margin-bottom: 16px;
-  }
-  .ring-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
-  .ring-wrap svg { transform: rotate(-90deg); }
-  .ring-label {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .ring-pct { font-size: 16px; font-weight: 800; line-height: 1; }
-  .ring-sub { font-size: 9px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
-  .defeitos-num { font-size: 28px; font-weight: 800; }
-  .defeitos-label { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
+  footer { position:relative; z-index:1; text-align:center; padding:18px; font-size:11px; color:var(--fg-dim); border-top:1px solid var(--border); padding-bottom:calc(18px + env(safe-area-inset-bottom)); }
+  footer strong { color:var(--fg-muted); }
 
-  /* Seção de info */
-  .section-title {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.1em; color: var(--fg-dim);
-    margin: 20px 0 10px; padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .info-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    margin-bottom: 10px;
-  }
-  .info-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px;
-  }
-  .info-card-label {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.08em; color: var(--fg-dim); margin-bottom: 4px;
-  }
-  .info-card-value {
-    font-size: 13px; font-weight: 600; color: var(--fg);
-    line-height: 1.3;
-  }
-  .info-card-value.mono { font-family: monospace; }
-  .info-card-value.warn { color: var(--amber); }
-  .info-card-value.danger { color: var(--red); }
-
-  .descricao {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px;
-    font-size: 13px; color: var(--fg-muted); line-height: 1.6;
-  }
-
-  /* Histórico */
-  .timeline { display: flex; flex-direction: column; gap: 0; }
-  .timeline-item {
-    display: flex; gap: 12px; padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .timeline-item:last-child { border-bottom: none; }
-  .timeline-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent); flex-shrink: 0; margin-top: 4px;
-  }
-  .timeline-evento { font-size: 13px; font-weight: 600; }
-  .timeline-meta { font-size: 11px; color: var(--fg-muted); margin-top: 2px; font-family: monospace; }
-
-  /* Tags */
-  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-  .tag {
-    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
-    border: 1px solid;
-  }
-
-  /* Footer */
-  footer {
-    text-align: center; padding: 20px;
-    font-size: 11px; color: var(--fg-dim);
-    border-top: 1px solid var(--border);
-  }
-  footer strong { color: var(--fg-muted); }
+  @media (max-width:380px) { .pk-nome{font-size:21px} .eff{gap:14px;padding:16px} .ring-wrap{width:96px;height:96px} .ring-wrap svg{width:96px;height:96px} }
+  @media (prefers-reduced-motion:reduce) { .rise{animation:none;opacity:1;transform:none} .dot.live::after{animation:none} }
 </style>
 </head>
 <body>
 
-<!-- Loading -->
 <div id="loadingScreen">
   <div class="spinner"></div>
   <div style="font-size:13px;color:var(--fg-muted)">Carregando dados...</div>
 </div>
 
-<!-- Erro -->
-<div id="errorScreen" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:32px;text-align:center;">
+<div id="errorScreen">
   <div class="error-icon">⚠️</div>
   <div style="font-size:18px;font-weight:800;" id="errorTitle">Não encontrado</div>
   <div style="font-size:14px;color:var(--fg-muted);max-width:300px;" id="errorMsg">Poka-Yoke não encontrado. Verifique se o QR Code é válido.</div>
 </div>
 
-<!-- Conteúdo principal -->
 <div id="appContent" style="display:none;flex-direction:column;flex:1;">
-
   <header>
-    <div class="logo-bar">
-      <div class="logo-dot"></div>
-      <span class="logo-text">Röchling Automotive</span>
-    </div>
+    <div class="logo-mark">R</div>
+    <div class="logo-text"><b>Röchling</b><span>Poka-Yoke</span></div>
     <span class="readonly-badge">🔒 Somente leitura</span>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">🌙</button>
   </header>
 
   <main>
-    <!-- Status banner -->
-    <div class="status-banner" id="statusBanner">
-      <div class="pulse"></div>
-      <div>
-        <div class="status-label" id="statusLabel">—</div>
+    <!-- HERO -->
+    <section class="hero rise" id="hero">
+      <div class="hero-bar"></div>
+      <div class="hero-glow"></div>
+      <div class="hero-body">
+        <span class="status-pill"><span class="dot" id="statusDot"></span><span id="statusLabel">—</span></span>
         <div class="status-sub" id="statusSub">—</div>
+        <div class="pk-id" id="pkId">—</div>
+        <div class="pk-nome" id="pkNome">—</div>
+        <div class="tags" id="pkTags"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- ID + Nome -->
-    <div class="pk-id" id="pkId">—</div>
-    <div class="pk-nome" id="pkNome">—</div>
-
-    <!-- Tags -->
-    <div class="tags" id="pkTags"></div>
-
-    <!-- Eficiência -->
-    <div class="eff-row">
+    <!-- EFICIÊNCIA -->
+    <section class="eff rise" style="animation-delay:.08s">
       <div class="ring-wrap">
-        <svg width="80" height="80" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="32" stroke="var(--track)" stroke-width="7" fill="none"/>
-          <circle id="ringFill" cx="40" cy="40" r="32" stroke="#22c55e" stroke-width="7" fill="none"
-            stroke-linecap="round"
-            stroke-dasharray="201.06"
-            stroke-dashoffset="201.06"/>
+        <svg width="112" height="112" viewBox="0 0 112 112">
+          <circle cx="56" cy="56" r="46" stroke="var(--track)" stroke-width="9" fill="none"/>
+          <circle id="ringFill" class="ring-fill" cx="56" cy="56" r="46" stroke="var(--green)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="289.03" stroke-dashoffset="289.03"/>
         </svg>
         <div class="ring-label">
-          <div class="ring-pct" id="ringPct" style="color:var(--green)">—</div>
-          <div class="ring-sub">Efic.</div>
+          <div class="ring-pct" id="ringPct">—</div>
+          <div class="ring-sub">Eficiência</div>
         </div>
       </div>
-      <div>
-        <div class="defeitos-num" id="defeitosNum">—</div>
-        <div class="defeitos-label">Defeitos evitados</div>
+      <div class="eff-txt">
+        <div class="eff-title">Desempenho</div>
+        <div class="eff-verdict" id="effVerdict">—</div>
+        <div class="eff-hint" id="effHint"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Informações técnicas -->
-    <div class="section-title">Informações Técnicas</div>
-    <div class="info-grid">
-      <div class="info-card">
-        <div class="info-card-label">Linha</div>
-        <div class="info-card-value" id="infoLinha">—</div>
+    <!-- VERIFICAÇÃO -->
+    <section class="verif rise" style="animation-delay:.14s">
+      <div class="verif-top">
+        <div>
+          <div class="lbl">Próxima verificação</div>
+          <div class="val mono" id="infoProxima">—</div>
+        </div>
+        <div class="days"><b id="daysNum">—</b><span id="daysLbl"></span></div>
       </div>
-      <div class="info-card">
-        <div class="info-card-label">Estação</div>
-        <div class="info-card-value mono" id="infoEstacao">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Part Number</div>
-        <div class="info-card-value mono" id="infoPartNumber">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Part Name</div>
-        <div class="info-card-value" id="infoPartName">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Responsável</div>
-        <div class="info-card-value" id="infoResponsavel">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Última Verificação</div>
-        <div class="info-card-value mono" id="infoUltima">—</div>
-      </div>
-    </div>
-    <div class="info-grid">
-      <div class="info-card" style="grid-column:1/-1;">
-        <div class="info-card-label">Próxima Verificação</div>
-        <div class="info-card-value mono" id="infoProxima">—</div>
-        <div style="font-size:11px;margin-top:3px;" id="infoProximaSub"></div>
-      </div>
-    </div>
+      <div class="vbar"><div id="vbarFill"></div></div>
+      <div class="verif-bot"><span id="vbarFrom">—</span><span id="vbarTo">—</span></div>
+    </section>
 
-    <!-- Descrição -->
-    <div id="descricaoWrap" style="display:none;margin-bottom:4px;">
-      <div class="section-title">Descrição</div>
-      <div class="descricao" id="infoDescricao"></div>
-    </div>
+    <!-- INFO -->
+    <div class="rise" style="animation-delay:.2s">
+      <div class="section-title">Informações técnicas</div>
+      <div class="info-grid">
+        <div class="info-card line" id="cardLinha"><div class="lbl">Linha</div><div class="val" id="infoLinha">—</div></div>
+        <div class="info-card"><div class="lbl">Estação</div><div class="val mono" id="infoEstacao">—</div></div>
+        <div class="info-card"><div class="lbl">Part Number</div><div class="val mono" id="infoPartNumber">—</div></div>
+        <div class="info-card"><div class="lbl">Part Name</div><div class="val" id="infoPartName">—</div></div>
+        <div class="info-card"><div class="lbl">Instrução de trabalho</div><div class="val mono" id="infoIT">—</div></div>
+        <div class="info-card"><div class="lbl">Responsável</div><div class="val" id="infoResponsavel">—</div></div>
+        <div class="info-card full"><div class="lbl">Última verificação</div><div class="val mono" id="infoUltima">—</div></div>
+      </div>
 
-    <!-- Histórico -->
-    <div id="historicoWrap" style="display:none;">
-      <div class="section-title">Histórico</div>
-      <div class="timeline" id="historicoList"></div>
+      <div id="descricaoWrap" style="display:none">
+        <div class="section-title">Descrição</div>
+        <div class="box" id="infoDescricao"></div>
+      </div>
+
+      <div id="matrizWrap" style="display:none">
+        <div class="section-title">Teste / Matriz de decisão</div>
+        <details class="acc" open><summary>Ver procedimento de teste</summary><div class="box" id="infoMatriz"></div></details>
+      </div>
+
+      <div id="historicoWrap" style="display:none">
+        <div class="section-title">Histórico</div>
+        <div class="timeline" id="historicoList"></div>
+      </div>
     </div>
   </main>
 
@@ -380,11 +237,9 @@
     <strong>Röchling Automotive</strong> · Sistema de Gestão Poka-Yoke<br>
     Acesso público — somente leitura
   </footer>
-
 </div>
 
 <script>
-// ─── CONFIG FIREBASE (mesma do sistema principal) ───
 const firebaseConfig = {
   apiKey: "AIzaSyDAkQ6FptWS5PHtyUKlfxNjznIsNRxbaoM",
   authDomain: "poka-yoke-87e80.firebaseapp.com",
@@ -393,17 +248,16 @@ const firebaseConfig = {
   messagingSenderId: "300583799766",
   appId: "1:300583799766:web:8d8bf963b58ede8aa97277"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ─── TEMA POR HORÁRIO (claro 06h–18h, escuro nos demais) ───
+// ─── TEMA (claro 06h–18h) ───
 function themeByHour() { const h = new Date().getHours(); return (h >= 6 && h < 18) ? 'light' : 'dark'; }
 function currentTheme() {
   const auto = themeByHour();
   try {
     const o = JSON.parse(localStorage.getItem('pkViewThemeOverride') || 'null');
-    if (o && o.period === auto) return o.mode;   // escolha manual vale só até o período mudar
+    if (o && o.period === auto) return o.mode;
     localStorage.removeItem('pkViewThemeOverride');
   } catch (e) {}
   return auto;
@@ -424,167 +278,146 @@ setInterval(() => { const w = currentTheme(); if ((w === 'light') !== document.d
 document.addEventListener('visibilitychange', () => { if (!document.hidden) applyTheme(currentTheme()); });
 
 // ─── HELPERS ───
-function fmtDate(d) {
-  if (!d) return '—';
-  const p = d.split('-');
-  return `${p[2]}/${p[1]}/${p[0]}`;
-}
+function parseLocal(iso) { if (!iso) return null; const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d); }
+function fmtDate(d) { if (!d) return '—'; const p = String(d).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
 function daysUntil(date) {
-  if (!date) return null;
-  const t = new Date(); t.setHours(0,0,0,0);
-  const g = new Date(date);
-  return Math.ceil((g - t) / (1000 * 60 * 60 * 24));
+  const g = parseLocal(date); if (!g) return null;
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((g - t) / 864e5);
 }
-function escHtml(s) {
-  return String(s||'').replace(/[&<>"']/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+const $ = id => document.getElementById(id);
 
-// ─── STATUS CONFIG ───
 const STATUS_MAP = {
-  'Ativo':      { cls: 'ativo',   label: 'Ativo',       sub: 'Operando normalmente' },
-  'Manutenção': { cls: 'manut',   label: 'Manutenção',  sub: 'Em manutenção ou calibração' },
-  'Inativo':    { cls: 'inativo', label: 'Inativo',     sub: 'Fora de operação' },
-  'Crítico':    { cls: 'critico', label: 'Crítico',     sub: 'Requer atenção imediata' },
+  'Ativo':      { color: 'var(--green)', label: 'Ativo',       sub: 'Operando normalmente', live: true },
+  'Manutenção': { color: 'var(--amber)', label: 'Manutenção',  sub: 'Dispositivo em manutenção', live: true },
+  'Calibração': { color: 'var(--cyan)',  label: 'Calibração',  sub: 'Em processo de calibração', live: true },
+  'Inativo':    { color: 'var(--gray)',  label: 'Inativo',     sub: 'Fora de operação', live: false },
+  'Crítico':    { color: 'var(--red)',   label: 'Crítico',     sub: 'Requer atenção imediata', live: true },
 };
+const TIPO_COLORS = { 'Sensor': '#06b6d4', 'Mecânico': '#ff6b1a', 'Óptico': '#a855f7', 'Pneumático': '#22c55e', 'Visual': '#f59e0b', 'Elétrico': '#22c55e', 'Eletrônico': '#3b82f6' };
 
-// ─── RENDER ───
-function render(p) {
-  // Status banner
-  const s = STATUS_MAP[p.status] || { cls: 'inativo', label: p.status || '—', sub: '' };
-  const banner = document.getElementById('statusBanner');
-  banner.className = 'status-banner ' + s.cls;
-  document.getElementById('statusLabel').textContent = s.label;
-  document.getElementById('statusSub').textContent   = s.sub;
+function render(p, linhaInfo) {
+  // Status
+  const s = STATUS_MAP[p.status] || { color: 'var(--gray)', label: p.status || '—', sub: '', live: false };
+  $('hero').style.setProperty('--st', s.color);
+  $('statusDot').classList.toggle('live', s.live);
+  $('statusLabel').textContent = s.label;
+  $('statusSub').textContent = s.sub;
 
-  // ID / Nome
-  document.getElementById('pkId').textContent   = p.id || '—';
-  document.getElementById('pkNome').textContent  = p.nome || '—';
+  $('pkId').textContent = p.id || '—';
+  $('pkNome').textContent = p.nome || '—';
+  document.title = `${p.id || 'Poka-Yoke'} • Röchling`;
 
-  // Tags (tipo + linha)
-  const TIPO_COLORS = {
-    'Sensor': '#06b6d4', 'Mecânico': '#a855f7', 'Óptico': '#ec4899',
-    'Pneumático': '#f59e0b', 'Elétrico': '#22c55e', 'Eletrônico': '#3b82f6'
-  };
+  // Tags
   const tc = TIPO_COLORS[p.tipo] || '#64748b';
-  let tagsHtml = '';
-  if (p.tipo) tagsHtml += `<span class="tag" style="background:${tc}15;color:${tc};border-color:${tc}40">${escHtml(p.tipo)}</span>`;
-  if (p.linha) tagsHtml += `<span class="tag" style="background:rgba(255,107,26,0.1);color:var(--accent-text);border-color:rgba(255,107,26,0.35)">${escHtml(p.linha)}</span>`;
-  document.getElementById('pkTags').innerHTML = tagsHtml;
+  const lc = (linhaInfo && linhaInfo.cor) || '#ff6b1a';
+  let tags = '';
+  if (p.tipo) tags += `<span class="tag" style="background:${tc}18;color:${tc};border-color:${tc}55"><i></i>${escHtml(p.tipo)}</span>`;
+  if (p.linha) tags += `<span class="tag" style="background:${lc}18;color:${lc};border-color:${lc}55"><i></i>${escHtml(p.linha)}</span>`;
+  if (p.estacao) tags += `<span class="tag" style="background:var(--bg3);color:var(--fg-muted);border-color:var(--border);font-family:ui-monospace,Menlo,Consolas,monospace">${escHtml(p.estacao)}</span>`;
+  $('pkTags').innerHTML = tags;
 
-  // Eficiência ring
+  // Eficiência
   const ef = parseFloat(p.eficiencia) || 0;
   const efColor = ef > 95 ? 'var(--green)' : ef > 85 ? 'var(--amber)' : 'var(--red)';
-  const circ = 2 * Math.PI * 32; // r=32
-  const offset = circ - (ef / 100) * circ;
-  const ring = document.getElementById('ringFill');
-  ring.style.stroke = efColor;
+  const circ = 2 * Math.PI * 46;
+  const ring = $('ringFill');
   ring.setAttribute('stroke-dasharray', circ.toFixed(2));
-  ring.setAttribute('stroke-dashoffset', offset.toFixed(2));
-  document.getElementById('ringPct').textContent = ef.toFixed(1) + '%';
-  document.getElementById('ringPct').style.color = efColor;
-  document.getElementById('defeitosNum').textContent =
-    (p.defeitosEvitados || 0).toLocaleString('pt-BR');
+  ring.setAttribute('stroke-dashoffset', circ.toFixed(2));
+  ring.style.stroke = efColor;
+  requestAnimationFrame(() => requestAnimationFrame(() => ring.setAttribute('stroke-dashoffset', (circ - (Math.min(ef, 100) / 100) * circ).toFixed(2))));
+  $('ringPct').textContent = ef.toFixed(1) + '%';
+  $('ringPct').style.color = efColor;
+  const v = $('effVerdict');
+  v.style.color = efColor;
+  v.textContent = ef > 95 ? 'Excelente' : ef > 85 ? 'Atenção' : 'Crítico';
+  $('effHint').textContent = ef > 95 ? 'Acima da meta de 95%.' : ef > 85 ? 'Entre 85% e 95%. Acompanhar.' : 'Abaixo de 85%. Ação necessária.';
 
-  // Info cards
-  document.getElementById('infoLinha').textContent       = p.linha || '—';
-  document.getElementById('infoEstacao').textContent     = p.estacao || '—';
-  document.getElementById('infoPartNumber').textContent  = p.partNumber || '—';
-  document.getElementById('infoPartName').textContent    = p.partName || '—';
-  document.getElementById('infoResponsavel').textContent = p.responsavel || '—';
-  document.getElementById('infoUltima').textContent      = fmtDate(p.ultimaVerificacao);
-
+  // Verificação
   const d = daysUntil(p.proximaVerificacao);
-  const proxEl = document.getElementById('infoProxima');
-  const proxSub = document.getElementById('infoProximaSub');
-  proxEl.textContent = fmtDate(p.proximaVerificacao);
-  if (d !== null) {
-    if (d < 0) {
-      proxEl.className = 'info-card-value mono danger';
-      proxSub.style.color = 'var(--red)';
-      proxSub.textContent = `⚠️ Vencido há ${Math.abs(d)} dias`;
-    } else if (d <= 7) {
-      proxEl.className = 'info-card-value mono warn';
-      proxSub.style.color = 'var(--amber)';
-      proxSub.textContent = `⚠️ Vence em ${d} dia${d !== 1 ? 's' : ''}`;
-    } else {
-      proxEl.className = 'info-card-value mono';
-      proxSub.style.color = 'var(--fg-dim)';
-      proxSub.textContent = `Em ${d} dias`;
+  $('infoProxima').textContent = fmtDate(p.proximaVerificacao);
+  $('infoUltima').textContent = fmtDate(p.ultimaVerificacao);
+  $('vbarFrom').textContent = fmtDate(p.ultimaVerificacao);
+  $('vbarTo').textContent = fmtDate(p.proximaVerificacao);
+  const dn = $('daysNum'), dl = $('daysLbl'), vf = $('vbarFill');
+  if (d === null) {
+    dn.textContent = '—'; dl.textContent = '';
+  } else {
+    const col = d < 0 ? 'var(--red)' : d <= 7 ? 'var(--amber)' : d <= 30 ? 'var(--cyan)' : 'var(--green)';
+    dn.style.color = col; vf.style.background = col;
+    dn.textContent = Math.abs(d);
+    dl.textContent = d < 0 ? (Math.abs(d) === 1 ? 'dia de atraso' : 'dias de atraso') : d === 0 ? 'vence hoje' : (d === 1 ? 'dia restante' : 'dias restantes');
+    let pct = 100;
+    const a = parseLocal(p.ultimaVerificacao), b = parseLocal(p.proximaVerificacao);
+    if (d >= 0) {
+      const total = a && b ? (b - a) / 864e5 : 365;
+      pct = total > 0 ? Math.max(4, Math.min(100, ((total - d) / total) * 100)) : 100;
     }
+    requestAnimationFrame(() => requestAnimationFrame(() => { vf.style.width = pct + '%'; }));
   }
 
-  // Descrição
-  if (p.descricao) {
-    document.getElementById('descricaoWrap').style.display = 'block';
-    document.getElementById('infoDescricao').textContent = p.descricao;
-  }
+  // Info
+  $('infoLinha').textContent = linhaInfo && linhaInfo.nome ? `${p.linha} • ${linhaInfo.nome}` : (p.linha || '—');
+  $('cardLinha').style.setProperty('--lc', lc);
+  $('infoEstacao').textContent = p.estacao || '—';
+  $('infoPartNumber').textContent = p.partNumber || '—';
+  $('infoPartName').textContent = p.partName || '—';
+  $('infoIT').textContent = p.instrucaoTrabalho || '—';
+  $('infoResponsavel').textContent = p.responsavel || '—';
 
-  // Histórico
-  if (p.historico && p.historico.length > 0) {
-    document.getElementById('historicoWrap').style.display = 'block';
-    const hist = [...p.historico].reverse().slice(0, 8);
-    document.getElementById('historicoList').innerHTML = hist.map(h =>
-      `<div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div>
-          <div class="timeline-evento">${escHtml(h.evento)}</div>
-          <div class="timeline-meta">${fmtDate(h.data)} · ${escHtml(h.usuario)}</div>
-        </div>
-      </div>`
+  if (p.descricao) { $('descricaoWrap').style.display = 'block'; $('infoDescricao').textContent = p.descricao; }
+  if (p.matrizDecisao) { $('matrizWrap').style.display = 'block'; $('infoMatriz').textContent = p.matrizDecisao; }
+
+  if (p.historico && p.historico.length) {
+    $('historicoWrap').style.display = 'block';
+    $('historicoList').innerHTML = [...p.historico].reverse().slice(0, 8).map(h =>
+      `<div class="t-item"><div class="t-dot"></div><div><div class="t-ev">${escHtml(h.evento)}</div><div class="t-meta">${fmtDate(h.data)} · ${escHtml(h.usuario)}</div></div></div>`
     ).join('');
   }
 
-  // Mostra conteúdo
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('appContent').style.display = 'flex';
+  $('loadingScreen').style.display = 'none';
+  $('appContent').style.display = 'flex';
 }
 
 function showError(title, msg) {
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('errorTitle').textContent = title;
-  document.getElementById('errorMsg').textContent = msg;
-  const err = document.getElementById('errorScreen');
-  err.style.display = 'flex';
+  $('loadingScreen').style.display = 'none';
+  $('errorTitle').textContent = title;
+  $('errorMsg').textContent = msg;
+  $('errorScreen').style.display = 'flex';
 }
 
-// ─── MAIN ───
+async function getLinha(codigo) {
+  if (!codigo) return null;
+  try {
+    const q = await db.collection('linhas').where('codigo', '==', codigo).limit(1).get();
+    return q.empty ? null : q.docs[0].data();
+  } catch (e) { return null; }
+}
+
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const id = (params.get('p') || params.get('id') || '').toUpperCase().trim();
-
   if (!id || !/^PY-\d{3,}$/i.test(id)) {
     showError('QR Code inválido', 'Nenhum ID de Poka-Yoke encontrado na URL. Use um QR Code gerado pelo sistema.');
     return;
   }
-
   try {
-    // Tenta auth anônimo; se falhar, tenta sem auth
-    try { await firebase.auth().signInAnonymously(); } catch(e) { /* ok */ }
-
-    const docRef = db.collection('pokaYokes').doc(id);
-    const snap = await docRef.get();
-
-    if (snap.exists) {
-      render({ ...snap.data(), id: snap.id });
-      return;
+    try { await firebase.auth().signInAnonymously(); } catch (e) { /* segue sem auth */ }
+    let data = null;
+    const snap = await db.collection('pokaYokes').doc(id).get();
+    if (snap.exists) data = { ...snap.data(), id: snap.id };
+    else {
+      const q = await db.collection('pokaYokes').where('id', '==', id).limit(1).get();
+      if (!q.empty) data = { ...q.docs[0].data(), id: q.docs[0].data().id || q.docs[0].id };
     }
-
-    // Fallback: busca por campo 'id' (caso a coleção use outro doc ID)
-    const q = await db.collection('pokaYokes').where('id', '==', id).limit(1).get();
-    if (!q.empty) {
-      const d = q.docs[0];
-      render({ ...d.data(), id: d.data().id || d.id });
-      return;
-    }
-
-    showError('Não encontrado', `Poka-Yoke "${id}" não existe no sistema. Verifique se foi cadastrado.`);
+    if (!data) { showError('Não encontrado', `Poka-Yoke "${id}" não existe no sistema. Verifique se foi cadastrado.`); return; }
+    render(data, await getLinha(data.linha));
   } catch (err) {
     console.error(err);
     showError('Erro de conexão', 'Não foi possível conectar ao banco de dados. Verifique sua internet e tente novamente.');
   }
 }
-
 main();
 </script>
 </body>
